@@ -7,8 +7,10 @@
 enum Screen {
     HOME_SCREEN,
     INTERVAL_SCREEN,
+    INTERVAL_SETTING_SCREEN,
     OPTION_SCREEN,
     PAUSE_SCREEN,
+    FREE_SCREEN,
     NO_OF_SCREEN
 };
 
@@ -40,6 +42,10 @@ typedef enum {
 typedef enum {
     C, CS, D, DS, E, F, FS, G, GS, A, AS, B
 } Actual_Note;
+
+typedef enum {
+    MAJOR, MINOR
+} Scale;
 
 typedef enum {
     UNISON = 0, MINOR_SECOND, MAJOR_SECOND, MINOR_THIRD,

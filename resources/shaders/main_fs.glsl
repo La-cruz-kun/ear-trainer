@@ -134,6 +134,8 @@ void main()
     // Ambient lighting
     vec3 ambient = light.ambient * albedo * ao;
     
+    float diffuse = max(dot(L, fragPosition), 0);
+    Lo = Lo * diffuse;
     vec3 color = ambient + Lo;
     
     // Tone mapping and gamma correction

@@ -46,6 +46,10 @@ int main(void) {
         if (IsKeyPressed(KEY_SPACE)) {
             reload();
         }
+        if (IsKeyPressed(KEY_ENTER)) {
+            reload();
+            plug_init(&plug);
+        }
         plug_update(&plug);
     }
     CloseWindow();

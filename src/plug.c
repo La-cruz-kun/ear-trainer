@@ -1,3 +1,10 @@
+/*
+ *
+ * Every funny division consisting of GetRenderWidth() or GetRenderHeight()
+ * is done as a ratio for different sizes of screen i haven't really dug in
+ * to make it without those divisions
+ */
+
 #include "ear_trainer.h"
 #include <raylib.h>
 #include <rlgl.h>
@@ -6,16 +13,11 @@
 #include <raymath.h>
 #include <stdio.h>
 #include <plug.h>
+#include "parser.c"
 
-void DrawBoundingBoxAsCube(BoundingBox box, Color color);
-void MapPianoNotes(void);
-void LoadPianoModel(void);
-void DrawPiano(void);
-void DrawPlaneModel(void);
-void LoadPlaneModel(void);
-void LoadUi(Plug *plug);
-void LoadResources(Plug *plug);
-void LoadSoundInstrument(void);
+
+float offset = 0;
+float velocity = 0;
 
 typedef struct {
     KeyboardKey key;
@@ -29,15 +31,14 @@ bool key_pressed = false;
 KeyboardHashMap *Key_to_note = NULL;
 int note_pool[POOL_SIZE] = {-1, -1, -1, -1};
 unsigned int currentOctave = 0;
-
-
-
+Font MenuFont = {0};
+Color note_color = BLUE;
 
 Vector3 lightPosition = (Vector3) {
-    2, 4, 2
+    2, 4, 0
 };
 Vector3 lightAmbient = (Vector3) {
-    0.2f, 0.2f, 0.2f
+    0.1f, 0.1f, 0.1f
 };
 Vector3 lightDiffuse = (Vector3) {
     5.0f, 5.0f, 5.0f
@@ -45,6 +46,7 @@ Vector3 lightDiffuse = (Vector3) {
 Vector3 lightSpecular = (Vector3) {
     1.0f, 1.0f, 1.0f
 };
+
 Model piano_model = {0};
 Model plane_model = {0};
 Model lightCube;
@@ -73,13 +75,24 @@ Texture2D planeNormal = { 0 };
 Texture2D planeMetallic = {0};
 Texture2D planeAO = {0};
 
-// Material 1: Bench
+// Material1: Bench
 Texture2D benchAlbedo = { 0 };
 Texture2D benchMetallicRoughness = { 0 };
 Texture2D benchNormal = { 0 };
-
+static char *text ="!#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`\
+abcdefghijklmnopqrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»\
+¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóô\
+õö÷øùúûüýþÿĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮ\
+įİıĲĳĴĵĶķĸĹĺĻļĽľŁłŃńŅņŇňŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŦŧŨũŪū\
+ŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽž";
 
 void plug_init(Plug *plug) {
+    plug->key = -1;
+    plug->scale = -1;
+    plug->current_note = -1;
+    int codepointCount = 0;
+    int *codepoints = LoadCodepoints(text, &codepointCount);
+    MenuFont = LoadFontEx("resources/fonts/0xProtoNerdFontMono-Italic.ttf", 64, codepoints, codepointCount);
     plug->camera.position = (Vector3) {
         0, 2, 2
     };
@@ -89,8 +102,19 @@ void plug_init(Plug *plug) {
     plug->camera.up = (Vector3) {
         0, 1, 0
     };
-    plug->camera.fovy = 45;
     plug->camera.projection = CAMERA_PERSPECTIVE;
+    plug->camera.fovy = 45.0;
+
+
+    plug->camera2d.target = (Vector2) {
+        0, 0
+    };
+    plug->camera2d.offset = (Vector2) {
+        0, 0
+    };
+    plug->camera2d.rotation = 0.0f;
+    plug->camera2d.zoom = 1.0f;
+
     hmdefault(Key_to_note, -1);
     hmput(Key_to_note, KEY_A, C1);
     hmput(Key_to_note, KEY_S, D1);
@@ -113,7 +137,7 @@ void plug_init(Plug *plug) {
 
     LoadResources(plug);
 
-    plug->screen = HOME_SCREEN;
+    plug->current_screen = HOME_SCREEN;
     plug->current_music_index = GetRandomValue(0, NO_OF_MUSIC - 1);
 
     LoadUi(plug);
@@ -127,26 +151,42 @@ void plug_init(Plug *plug) {
 
     SetTargetFPS(60);
     PlayMusicStream(plug->music[plug->current_music_index]);
+    read_id3v2(plug->music_file[plug->current_music_index]);
 
 }
 void plug_update(Plug *plug) {
-    switch(plug->screen) {
+    switch(plug->current_screen) {
     case HOME_SCREEN:
-        if (!IsMusicStreamPlaying(plug->music[plug->current_music_index]))
-            PlayMusicStream(plug->music[plug->current_music_index]);
-        UpdateMusicStream(plug->music[plug->current_music_index]);
-        for (int i = 0; i < plug->no_of_buttons[HOME_SCREEN]; i++) {
-            float height = plug->images[2].height * GetRenderHeight() / 2000.0;
-            float padding = GetRenderHeight() / 20.0;
-            plug->buttons[HOME_SCREEN][i].bound = (Rectangle) {
-                .width = plug->images[2].width * GetRenderHeight()/2000.0,
-                .height = height,
-                .x = GetRenderWidth() * 3/4.0,
-                .y = (float)GetRenderHeight()/(plug->no_of_buttons[HOME_SCREEN]+1) - height/2 + (i*(height + padding))
-            };
+        if (IsKeyDown(KEY_RIGHT))
+            plug->camera2d.offset.x += 5;
+        if (IsKeyDown(KEY_LEFT))
+            plug->camera2d.offset.x -= 5;
+        if (GetMusicTimePlayed(plug->music[plug->current_music_index]) >= GetMusicTimeLength(plug->music[plug->current_music_index]) - 4) {
+            StopMusicStream(plug->music[plug->current_music_index]);
+            plug->current_music_index = GetRandomValue(0, NO_OF_MUSIC - 1);
+            printf("%d\n", plug->current_music_index);
         }
+        if (!IsMusicStreamPlaying(plug->music[plug->current_music_index])) {
+            PlayMusicStream(plug->music[plug->current_music_index]);
+            read_id3v2(plug->music_file[plug->current_music_index]);
+        }
+        UpdateMusicStream(plug->music[plug->current_music_index]);
+
+        AlignScreenButtons(
+            MENU_BUTTON_HEIGHT,
+            MENU_BUTTON_WIDTH,
+            GetRenderWidth() * 3/4.0,
+            0,
+            GetRenderHeight()/ 20.0,
+            plug->no_of_buttons[HOME_SCREEN],
+            plug->buttons[HOME_SCREEN]
+        );
+
         if (IsMenuButtonPressed(&plug->buttons[HOME_SCREEN][0])) {
-            plug->screen = INTERVAL_SCREEN;
+            plug->former_screen = plug->current_screen;
+            plug->current_screen = INTERVAL_SETTING_SCREEN;
+            plug->looped_once = false;
+            plug->screen_transition = true;
         }
         if (IsMenuButtonPressed(&plug->buttons[HOME_SCREEN][1])) {}
         if (IsMenuButtonPressed(&plug->buttons[HOME_SCREEN][2])) {}
@@ -156,73 +196,51 @@ void plug_update(Plug *plug) {
         calcMenuButtonPosition(&plug->buttons[HOME_SCREEN][0], &plug->buttons[HOME_SCREEN][1], &plug->buttons[HOME_SCREEN][2], &plug->buttons[HOME_SCREEN][3], NULL);
         BeginDrawing();
         ClearBackground(BLACK);
+        BeginMode2D(plug->camera2d);
         DrawBackgroundImage(plug->images[0]);
         for (int i = 0; i < plug->no_of_buttons[HOME_SCREEN]; i++)
             DrawMenuButton(plug->buttons[HOME_SCREEN][i]);
-        /* printf("%d\n", plug->no_of_buttons[HOME_SCREEN]); */
+        DrawTextEx(MenuFont, TextFormat("Currently Playing %s - %s", Title, Artist), (Vector2) {
+            GetRenderWidth() * 1/100.0, GetRenderHeight() * 1/100.0
+        }, 24 * GetRenderHeight()/600.0, 1, DARKGREEN);
         DrawFPS(10, 10);
+        EndMode2D();
         EndDrawing();
         break;
 
-    case INTERVAL_SCREEN:
+    case FREE_SCREEN:
     {
         plug->time = GetTime();
-        int key;
-        while ((key = GetKeyPressed()) != 0) {
-            if (hmget(Key_to_note, key) != -1) {
-                int note = hmget(Key_to_note, key) + currentOctave * OCTAVE;
-                for (int i = 0; i < 4; i++) {
-                    if (note_pool[i] == -1) {
-                        note_pool[i] = note;
-                        PlaySound(sound[note]);
-                        break;
-                    }
-                }
-                continue;
-            }
-            if ( key == KEY_RIGHT_SHIFT) {
-                if (currentOctave >=7)
-                    continue;
-                currentOctave++;
-                continue;
-            }
-            if (key == KEY_LEFT_SHIFT) {
-                if (currentOctave <= 0)
-                    continue;
-                currentOctave--;
-                continue;
-            }
-
-        }
-        for (int i = 0; i < hmlen(Key_to_note); i++) {
-            KeyboardKey key = Key_to_note[i].key;
-            if (IsKeyReleased(key)) {
-                int note = hmget(Key_to_note, key) + currentOctave * OCTAVE;
-                for (int i = 0; i < 4; i++) {
-                    if (note_pool[i] == note) {
-                        StopSound(sound[note]);
-                        note_pool[i] = -1;
-                    }
-                }
-            }
-        }
-        lightPosition.x = cosf(plug->time) * 3;
-        lightPosition.z = sinf(plug->time) * 3;
-        lightPosition.y = 2 + sinf(plug->time * 0.5f) * 1;
+        CheckKeyPress();
 
         // Update light position and view position
         SetShaderValue(pbrShader, lightPosLoc, &lightPosition, SHADER_UNIFORM_VEC3);
         SetShaderValue(pbrShader, viewPosLoc, &plug->camera.position, SHADER_UNIFORM_VEC3);
         SetShaderValue(planeShader, lightPosLoc, &lightPosition, SHADER_UNIFORM_VEC3);
         SetShaderValue(planeShader, viewPosLoc, &plug->camera.position, SHADER_UNIFORM_VEC3);
+        AlignScreenButtons(
+            MENU_BUTTON_HEIGHT,
+            MENU_BUTTON_WIDTH,
+            GetRenderWidth() * 3/4.0,
+            0,
+            GetRenderHeight()/ 20.0,
+            plug->no_of_buttons[HOME_SCREEN],
+            plug->buttons[HOME_SCREEN]
+        );
+
+        if (IsMenuButtonPressed(&plug->buttons[INTERVAL_SCREEN][0])) {
+            plug->former_screen = plug->current_screen;
+            plug->current_screen = PAUSE_SCREEN;
+            plug->screen_transition = true;
+        }
         BeginDrawing();
-        ClearBackground(BLACK);
+        ClearBackground(BROWN);
         BeginMode3D(plug->camera);
 
         DrawPlaneModel();
         DrawPiano();
 
-        // Draw light cube
+// Draw light cube
         DrawModel(lightCube, lightPosition, 0.5f, YELLOW);
         for (int i = 0; i < 4; i++) {
             if (note_pool[i] > -1) {
@@ -231,9 +249,276 @@ void plug_update(Plug *plug) {
         }
         /* DrawGrid(10, 1); */
         EndMode3D();
+        for (int i = 0; i < plug->no_of_buttons[INTERVAL_SCREEN]; i++)
+            DrawMenuButton(plug->buttons[INTERVAL_SCREEN][i]);
         DrawFPS(10, 10);
         EndDrawing();
         break;
+    }
+
+    case INTERVAL_SETTING_SCREEN:
+    {
+        if (plug->screen_transition) {
+            ScreenTransitionHomeToIntSetting(plug);
+            break;
+        };
+        plug->camera.position = (Vector3) {
+            2, 4, 4
+        };
+        MenuButton Ok = CreateMenuButton(plug->images[10], "", WHITE, (Rectangle) {
+            GetRenderWidth() * 1/2.0, GetRenderHeight() - GetRenderHeight() * 0.2, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT
+        });
+
+        SetShaderValue(pbrShader, lightPosLoc, &lightPosition, SHADER_UNIFORM_VEC3);
+        SetShaderValue(pbrShader, viewPosLoc, &plug->camera.position, SHADER_UNIFORM_VEC3);
+        SetShaderValue(planeShader, lightPosLoc, &lightPosition, SHADER_UNIFORM_VEC3);
+        SetShaderValue(planeShader, viewPosLoc, &plug->camera.position, SHADER_UNIFORM_VEC3);
+        for (int i = 0; i < plug->no_of_buttons[INTERVAL_SETTING_SCREEN]; i++) {
+            if (i < 12) {
+                float padding = GetRenderHeight() / 20.0/ 12.0;
+                float height = MENU_BUTTON_HEIGHT/ 1.8 ;
+                plug->buttons[INTERVAL_SETTING_SCREEN][i].bound = (Rectangle) {
+                    .width = MENU_BUTTON_WIDTH,
+                    .height = height,
+                    .x = GetRenderWidth() * 1/4.0,
+                    .y = (float)GetRenderHeight()/(plug->no_of_buttons[INTERVAL_SETTING_SCREEN]+1) - height/2 + (i*(height + padding))
+                };
+
+            } else {
+                float height = MENU_BUTTON_HEIGHT;
+                float padding = GetRenderHeight() / 20.0;
+                plug->buttons[INTERVAL_SETTING_SCREEN][i].bound = (Rectangle) {
+                    .width = MENU_BUTTON_HEIGHT,
+                    .height = height,
+                    .x = GetRenderWidth() * 3/4.0,
+                    .y = (float)GetRenderHeight()/(plug->no_of_buttons[INTERVAL_SETTING_SCREEN]+1-12) - height/2 + ((i-12)*(height + padding))
+                };
+            }
+        }
+
+        for (int i = 0; i < plug->no_of_buttons[INTERVAL_SETTING_SCREEN]; i++) {
+            if (i < 12) {
+                if (IsMenuButtonPressed(&plug->buttons[INTERVAL_SETTING_SCREEN][i])) {
+                    if (plug->key != -1) {
+                        plug->buttons[INTERVAL_SETTING_SCREEN][plug->key].image = plug->images[10 + plug->key];
+                    }
+                    plug->buttons[INTERVAL_SETTING_SCREEN][i].image = plug->images[10 + 12 + i]; // 10 is the starting position of the button
+                    // index 12 is the octave while i is the offset
+                    plug->key = i;
+                    break;
+
+                }
+
+            } else {
+                if (IsMenuButtonPressed(&plug->buttons[INTERVAL_SETTING_SCREEN][i])) {
+                    if (plug->scale != -1) {
+                        plug->buttons[INTERVAL_SETTING_SCREEN][plug->scale + 12].image = plug->images[10 + plug->scale + 24];
+                    }
+                    plug->buttons[INTERVAL_SETTING_SCREEN][i].image = plug->images[34 + 2 + i - 12];
+                    plug->scale = i-12;
+                    break;
+
+                }
+
+            }
+        }
+
+        BeginDrawing();
+        ClearBackground(BLACK);
+        BeginMode3D(plug->camera);
+        DrawPlaneModel();
+        DrawPiano();
+        EndMode3D();
+        DrawTextEx(MenuFont, "Choose A Key", (Vector2) {
+            0, GetRenderHeight() * 1/1.8
+        }, 36 * GetRenderHeight()/600.0, 1, (Color) {
+            0, 255, 255, 255
+        });
+        DrawTextEx(MenuFont, "Choose A Scale", (Vector2) {
+            GetRenderWidth() * 1/2.0, GetRenderHeight() * 1/1.8
+        }, 36 * GetRenderHeight()/600.0, 1, (Color) {
+            0, 255, 255, 255
+        });
+        for (int i= 0; i < plug->no_of_buttons[INTERVAL_SETTING_SCREEN]; i++) {
+            DrawMenuButton(plug->buttons[INTERVAL_SETTING_SCREEN][i]);
+        }
+        if (plug->key != -1 && plug->scale != - 1) {
+            if (IsMenuButtonPressed(&Ok)) {
+                plug->former_screen = plug->current_screen;
+                plug->current_screen = INTERVAL_SCREEN;
+                plug->screen_transition = true;
+            }
+            DrawMenuButton(Ok);
+        }
+        DrawFPS(10, 10);
+        EndDrawing();
+
+        break;
+    }
+
+    case INTERVAL_SCREEN:
+    {
+        if (plug->screen_transition) {
+            if (plug-> former_screen == INTERVAL_SETTING_SCREEN) {
+                plug->camera2d.offset = (Vector2) {
+                    0, 0
+                };
+                ScreenTransitionIntSettingToInt(plug);
+            } else if (plug->former_screen == PAUSE_SCREEN) {
+                ScreenTransitionPauseToInt(plug);
+                break;
+            }
+        };
+
+        // interval logic
+        if (plug->current_note == -1) {
+            plug->current_note = GenNote();
+            PlaySound(sound[plug->current_note]);
+            plug->time = 0;
+        }
+
+        bool playing = !IsSoundPlaying(sound[plug->current_note]) && !plug->player_respond;
+
+
+
+        if (playing) {
+
+            // check input
+            for (int i = 0; i < hmlen(Key_to_note); i++) {
+                KeyboardKey key = Key_to_note[i].key;
+                int note = hmget(Key_to_note, key) + currentOctave * OCTAVE;
+                if (IsKeyPressed(key)) {
+                    PlaySound(sound[note]);
+                    note_pool[0] = note;
+                    plug->player_respond = true;
+                    plug->time = 0;
+                    note_color = RED;
+                    if (note % OCTAVE == plug->current_note % OCTAVE) {
+                        note_color = GREEN;
+                        plug->score += 1;
+                    }
+                }
+            }
+        } else {
+            plug->time += GetFrameTime();
+            if (plug->player_respond && plug->time > 2) {
+                StopSound(sound[note_pool[0]]);
+                if (plug->time > 3) {
+                    plug->time = 0;
+                    plug->player_respond = false;
+                    plug->current_note = GenNote();
+                    PlaySound(sound[plug->current_note]);
+
+                }
+            }
+            if (IsSoundPlaying(sound[plug->current_note]) && plug->time > 2) {
+                StopSound(sound[plug->current_note]);
+                plug->time = 0;
+            }
+
+        }
+        if ( IsKeyPressed(KEY_RIGHT_SHIFT)) {
+            if (currentOctave < 7)
+                currentOctave++;
+        }
+        if (IsKeyPressed(KEY_LEFT_SHIFT)) {
+            if (currentOctave > 0)
+                currentOctave--;
+        }
+
+        // Update light position and view position
+        SetShaderValue(pbrShader, lightPosLoc, &lightPosition, SHADER_UNIFORM_VEC3);
+        SetShaderValue(pbrShader, viewPosLoc, &plug->camera.position, SHADER_UNIFORM_VEC3);
+        SetShaderValue(planeShader, lightPosLoc, &lightPosition, SHADER_UNIFORM_VEC3);
+        SetShaderValue(planeShader, viewPosLoc, &plug->camera.position, SHADER_UNIFORM_VEC3);
+        AlignScreenButtons(
+            MENU_BUTTON_HEIGHT,
+            MENU_BUTTON_WIDTH,
+            GetRenderWidth() * 3/4.0,
+            0,
+            GetRenderHeight()/ 20.0,
+            plug->no_of_buttons[INTERVAL_SCREEN],
+            plug->buttons[INTERVAL_SCREEN]
+        );
+
+        if (IsMenuButtonPressed(&plug->buttons[INTERVAL_SCREEN][0])) {
+            plug->former_screen = plug->current_screen;
+            plug->current_screen = PAUSE_SCREEN;
+            plug->screen_transition = true;
+        }
+
+
+
+        BeginDrawing();
+        ClearBackground(BROWN);
+        BeginMode3D(plug->camera);
+
+        DrawPlaneModel();
+        DrawPiano();
+
+        DrawModel(lightCube, lightPosition, 0.5f, YELLOW);
+        if (note_pool[0] > -1) {
+            DrawBoundingBoxAsCube(keyBoxes[note_pool[0]], note_color);
+        }
+        /* DrawGrid(10, 1); */
+        EndMode3D();
+        for (int i = 0; i < plug->no_of_buttons[INTERVAL_SCREEN]; i++)
+            DrawMenuButton(plug->buttons[INTERVAL_SCREEN][i]);
+        DrawText(TextFormat("Current Key is %s", Key_to_text(plug->key)), 30, 30, 24, RAYWHITE);
+        DrawFPS(10, 10);
+        EndDrawing();
+        break;
+    }
+
+    case PAUSE_SCREEN:
+    {
+        if (plug->screen_transition) {
+            if (plug->former_screen == INTERVAL_SCREEN)
+                ScreenTransitionIntToPause(plug);
+            break;
+        };
+        if (!IsMusicStreamPlaying(plug->music[plug->current_music_index])) {
+            PlayMusicStream(plug->music[plug->current_music_index]);
+            read_id3v2(plug->music_file[plug->current_music_index]);
+        }
+        UpdateMusicStream(plug->music[plug->current_music_index]);
+        AlignScreenButtons(
+            MENU_BUTTON_HEIGHT,
+            MENU_BUTTON_WIDTH,
+            GetRenderWidth() * 3/4.0,
+            0,
+            GetRenderHeight()/ 20.0,
+            plug->no_of_buttons[PAUSE_SCREEN],
+            plug->buttons[PAUSE_SCREEN]
+        );
+
+        if (IsMenuButtonPressed(&plug->buttons[PAUSE_SCREEN][0])) {
+            plug->former_screen = plug->current_screen;
+            plug->current_screen = INTERVAL_SCREEN;
+            plug->looped_once = false;
+            plug->screen_transition = true;
+            plug->camera2d.offset = (Vector2) {
+                0, 0
+            };
+        }
+        if (IsMenuButtonPressed(&plug->buttons[PAUSE_SCREEN][1])) {}
+        if (IsMenuButtonPressed(&plug->buttons[PAUSE_SCREEN][2])) {}
+        if (IsMenuButtonPressed(&plug->buttons[PAUSE_SCREEN][3])) {
+            plug->quit = true;
+        }
+        calcMenuButtonPosition(&plug->buttons[PAUSE_SCREEN][0], &plug->buttons[PAUSE_SCREEN][1], &plug->buttons[PAUSE_SCREEN][2], &plug->buttons[PAUSE_SCREEN][3], NULL);
+        BeginDrawing();
+        ClearBackground(BLACK);
+        DrawBackgroundImage(plug->images[1]);
+        for (int i = 0; i < plug->no_of_buttons[PAUSE_SCREEN]; i++)
+            DrawMenuButton(plug->buttons[PAUSE_SCREEN][i]);
+        DrawTextEx(MenuFont, TextFormat("Currently Playing %s - %s", Title, Artist), (Vector2) {
+            GetRenderWidth() * 1/100.0, GetRenderHeight() * 1/100.0
+        }, 24 * GetRenderHeight()/600.0, 1, DARKBROWN);
+        DrawFPS(10, 10);
+        EndDrawing();
+        break;
+
     }
     default:
         break;
@@ -349,25 +634,19 @@ void DrawBoundingBoxAsCube(BoundingBox box, Color color)
         (box.min.y + box.max.y) * 0.5f,
         (box.min.z + box.max.z) * 0.5f
     };
-
     // Find size (extent along each axis)
     Vector3 size = {
         (box.max.x - box.min.x),
         (box.max.y - box.min.y),
         (box.max.z - box.min.z)
     };
-
-    // Draw wireframe cube for clarity
-    /* DrawCubeWires(center, size.x, size.y, size.z, color); */
-
-    // Or if you want it filled:
     DrawCube(center, size.x, size.y, size.z, color);
 }
 
 
 
 void LoadPlaneModel(void) {
-    plane_model = LoadModelFromMesh(GenMeshPlane(8, 8, 1, 1));
+    plane_model = LoadModelFromMesh(GenMeshPlane(10, 10, 1, 1));
 
     planeShader = LoadShader("resources/shaders/main_vs.glsl", "resources/shaders/plane_fs.glsl");
 
@@ -387,7 +666,7 @@ void LoadPlaneModel(void) {
     int metallicUnit = 3;
     int aoUnit = 4;
     Vector2 tile = (Vector2) {
-        2.5, 2.5
+        5, 5
     };
     SetShaderValue(planeShader, matDiffLoc, &diffuseUnit, SHADER_UNIFORM_INT);
     SetShaderValue(planeShader, matRoughnessLoc, &roughnessUnit, SHADER_UNIFORM_INT);
@@ -679,32 +958,472 @@ void LoadSoundInstrument(void) {
 void LoadResources(Plug *plug) {
     plug->images[0] = LoadTexture("resources/images/background1.jpg");
     plug->images[1] = LoadTexture("resources/images/background2.jpg");
+    // home screen buttons
     plug->images[2] = LoadTexture("resources/images/button1.png");
     plug->images[3] = LoadTexture("resources/images/button2.png");
+    plug->images[4] = LoadTexture("resources/images/button3.png");
+    plug->images[5] = LoadTexture("resources/images/button4.png");
 
-    plug->music[0] = LoadMusicStream("resources/music/4AM.mp3");
-    plug->music[1] = LoadMusicStream("resources/music/Bohemian.mp3");
-    plug->music[2] = LoadMusicStream("resources/music/Duvet.mp3");
-    plug->music[3] = LoadMusicStream("resources/music/Just A Joke.mp3");
-    plug->music[4] = LoadMusicStream("resources/music/Machi No Dorufin.mp3");
+    // pause screen buttons
+    plug->images[6] = LoadTexture("resources/images/button5.png");
+    plug->images[7] = LoadTexture("resources/images/button6.png");
+    plug->images[8] = LoadTexture("resources/images/button7.png");
+    plug->images[9] = LoadTexture("resources/images/button8.png");
+
+    // interval settin
+    // white button C - B
+    plug->images[10] = LoadTexture("resources/images/button9.png");
+    plug->images[11] = LoadTexture("resources/images/button10.png");
+    plug->images[12] = LoadTexture("resources/images/button11.png");
+    plug->images[13] = LoadTexture("resources/images/button12.png");
+    plug->images[14] = LoadTexture("resources/images/button13.png");
+    plug->images[15] = LoadTexture("resources/images/button14.png");
+    plug->images[16] = LoadTexture("resources/images/button15.png");
+    plug->images[17] = LoadTexture("resources/images/button16.png");
+    plug->images[18] = LoadTexture("resources/images/button17.png");
+    plug->images[19] = LoadTexture("resources/images/button18.png");
+    plug->images[20] = LoadTexture("resources/images/button19.png");
+    plug->images[21] = LoadTexture("resources/images/button20.png");
+
+    // green button C - B
+    plug->images[22] = LoadTexture("resources/images/button21.png");
+    plug->images[23] = LoadTexture("resources/images/button22.png");
+    plug->images[24] = LoadTexture("resources/images/button23.png");
+    plug->images[25] = LoadTexture("resources/images/button24.png");
+    plug->images[26] = LoadTexture("resources/images/button25.png");
+    plug->images[27] = LoadTexture("resources/images/button26.png");
+    plug->images[28] = LoadTexture("resources/images/button27.png");
+    plug->images[29] = LoadTexture("resources/images/button28.png");
+    plug->images[30] = LoadTexture("resources/images/button29.png");
+    plug->images[31] = LoadTexture("resources/images/button30.png");
+    plug->images[32] = LoadTexture("resources/images/button31.png");
+    plug->images[33] = LoadTexture("resources/images/button32.png");
+
+    // scale
+    plug->images[34] = LoadTexture("resources/images/button33.png");
+    plug->images[35] = LoadTexture("resources/images/button34.png");
+
+    plug->music_file[0] = "resources/music/4AM.mp3";
+    plug->music_file[1] = "resources/music/Bohemian.mp3";
+    plug->music_file[2] = "resources/music/Duvet.mp3";
+    plug->music_file[3] = "resources/music/Just A Joke.mp3";
+    plug->music_file[4] = "resources/music/Machi No Dorufin.mp3";
+
+    for (int i = 0; i < NO_OF_MUSIC; i++) {
+        plug->music[i] = LoadMusicStream(plug->music_file[i]);
+    }
 }
 
 void LoadUi(Plug *plug) {
     /***************** HOME SCREEN UI ******************/
 
-    plug->buttons[HOME_SCREEN][0] = CreateMenuButton(plug->images[2], "Interval", GREEN, (Rectangle) {
-        .width = plug->images[2].width/2.0, .height = plug->images[2].height/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    plug->buttons[HOME_SCREEN][0] = CreateMenuButton(plug->images[2], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/4.0, .x = GetRenderWidth() * 3/4.0, .y = 200
     });
-    plug->buttons[HOME_SCREEN][1] = CreateMenuButton(plug->images[2], "Chord", GREEN, (Rectangle) {
-        .width = plug->images[2].width/2.0, .height = plug->images[2].height/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    plug->buttons[HOME_SCREEN][1] = CreateMenuButton(plug->images[3], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
     });
-    plug->buttons[HOME_SCREEN][2] = CreateMenuButton(plug->images[2], "Settings", GREEN, (Rectangle) {
-        .width = plug->images[2].width/2.0, .height = plug->images[2].height/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    plug->buttons[HOME_SCREEN][2] = CreateMenuButton(plug->images[4], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
     });
-    plug->buttons[HOME_SCREEN][3] = CreateMenuButton(plug->images[2], "Quit", GREEN, (Rectangle) {
-        .width = plug->images[2].width/2.0, .height = plug->images[2].height/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    plug->buttons[HOME_SCREEN][3] = CreateMenuButton(plug->images[5], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
     });
     for (plug->no_of_buttons[HOME_SCREEN] = 0; plug->buttons[HOME_SCREEN][plug->no_of_buttons[HOME_SCREEN]].is == true; plug->no_of_buttons[HOME_SCREEN]++);
 
     /***************************************************/
+
+
+
+    /***************** INTERVAL SCREEN UI ******************/
+    plug->buttons[INTERVAL_SCREEN][0] = CreateMenuButton(plug->images[12], "Pause", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    for (plug->no_of_buttons[INTERVAL_SCREEN] = 0; plug->buttons[INTERVAL_SCREEN][plug->no_of_buttons[INTERVAL_SCREEN]].is == true; plug->no_of_buttons[INTERVAL_SCREEN]++);
+
+    /***************************************************/
+
+
+    /***************** PAUSE SCREEN UI ******************/
+
+    plug->buttons[PAUSE_SCREEN][0] = CreateMenuButton(plug->images[6], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/4.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[PAUSE_SCREEN][1] = CreateMenuButton(plug->images[7], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[PAUSE_SCREEN][2] = CreateMenuButton(plug->images[8], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[PAUSE_SCREEN][3] = CreateMenuButton(plug->images[9], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    for (plug->no_of_buttons[PAUSE_SCREEN] = 0; plug->buttons[PAUSE_SCREEN][plug->no_of_buttons[PAUSE_SCREEN]].is == true; plug->no_of_buttons[PAUSE_SCREEN]++);
+    /***************************************************/
+
+
+    /***************** INTERVAL SETTING SCREEN UI ******************/
+
+    // key button
+    plug->buttons[INTERVAL_SETTING_SCREEN][0] = CreateMenuButton(plug->images[10], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][1] = CreateMenuButton(plug->images[11], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][2] = CreateMenuButton(plug->images[12], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][3] = CreateMenuButton(plug->images[13], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][4] = CreateMenuButton(plug->images[14], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][5] = CreateMenuButton(plug->images[15], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][6] = CreateMenuButton(plug->images[16], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][7] = CreateMenuButton(plug->images[17], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][8] = CreateMenuButton(plug->images[18], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][9] = CreateMenuButton(plug->images[19], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][10] = CreateMenuButton(plug->images[20], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][11] = CreateMenuButton(plug->images[21], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+
+    // scale button
+    plug->buttons[INTERVAL_SETTING_SCREEN][12] = CreateMenuButton(plug->images[34], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+    plug->buttons[INTERVAL_SETTING_SCREEN][13] = CreateMenuButton(plug->images[35], "", GREEN, (Rectangle) {
+        .width = 600/2.0, .height = 220/2.0, .x = GetRenderWidth() * 3/4.0, .y = 200
+    });
+
+    for (plug->no_of_buttons[INTERVAL_SETTING_SCREEN] = 0; plug->buttons[INTERVAL_SETTING_SCREEN][plug->no_of_buttons[INTERVAL_SETTING_SCREEN]].is == true; plug->no_of_buttons[INTERVAL_SETTING_SCREEN]++);
+
+    /***************************************************/
+}
+
+void CheckKeyPress(void) {
+    int key;
+    while ((key = GetKeyPressed()) != 0) {
+        if (hmget(Key_to_note, key) != -1) {
+            int note = hmget(Key_to_note, key) + currentOctave * OCTAVE;
+            for (int i = 0; i < 4; i++) {
+                if (note_pool[i] == -1) {
+                    note_pool[i] = note;
+                    PlaySound(sound[note]);
+                    break;
+                }
+            }
+            continue;
+        }
+        if ( key == KEY_RIGHT_SHIFT) {
+            if (currentOctave >=7)
+                continue;
+            currentOctave++;
+            continue;
+        }
+        if (key == KEY_LEFT_SHIFT) {
+            if (currentOctave <= 0)
+                continue;
+            currentOctave--;
+            continue;
+        }
+
+    }
+    for (int i = 0; i < hmlen(Key_to_note); i++) {
+        KeyboardKey key = Key_to_note[i].key;
+        if (IsKeyReleased(key)) {
+            int note = hmget(Key_to_note, key) + currentOctave * OCTAVE;
+            for (int i = 0; i < 4; i++) {
+                if (note_pool[i] == note) {
+                    StopSound(sound[note]);
+                    note_pool[i] = -1;
+                }
+            }
+        }
+    }
+}
+
+
+void ScreenTransitionHomeToIntSetting(Plug *plug) {
+    // Spring bounce animation
+    float stiffness = 100;
+    float damping = 10;
+    float displacement = GetRenderWidth() - offset;
+    float springForce = stiffness * displacement;
+    float dampingForce = -damping * velocity;
+    float force = springForce + dampingForce;
+    float speed = fabsf(velocity);
+    float tolerance = 1;
+    velocity += force * GetFrameTime();
+    offset += velocity * GetFrameTime();
+    displacement = fabsf(displacement);
+    if (displacement < tolerance && speed < tolerance) {
+        offset = GetRenderWidth();
+        plug->screen_transition = false;
+        plug->camera2d.offset.x = -offset;
+        offset = 0;
+        velocity = 0;
+    } else {
+        plug->camera2d.offset.x = -offset;
+    }
+    BeginDrawing();
+    ClearBackground(BLACK);
+    BeginMode2D(plug->camera2d);
+    for (int i = 0; i < plug->no_of_buttons[INTERVAL_SETTING_SCREEN]; i++) {
+        if (i < 12) {
+            float padding = GetRenderHeight() / 20.0/ 12.0;
+            float height = MENU_BUTTON_HEIGHT/ 1.8 ;
+            plug->buttons[INTERVAL_SETTING_SCREEN][i].bound = (Rectangle) {
+                .width = MENU_BUTTON_WIDTH,
+                .height = height,
+                .x = GetRenderWidth() * 1/4.0 + GetRenderWidth(),
+                .y = (float)GetRenderHeight()/(plug->no_of_buttons[INTERVAL_SETTING_SCREEN]+1) - height/2 + (i*(height + padding))
+            };
+
+        } else {
+            float height = MENU_BUTTON_HEIGHT;
+            float padding = GetRenderHeight() / 20.0;
+            plug->buttons[INTERVAL_SETTING_SCREEN][i].bound = (Rectangle) {
+                .width = MENU_BUTTON_HEIGHT,
+                .height = height,
+                .x = GetRenderWidth() * 3/4.0 + GetRenderWidth(),
+                .y = (float)GetRenderHeight()/(plug->no_of_buttons[INTERVAL_SETTING_SCREEN]+1-12) - height/2 + ((i-12)*(height + padding))
+            };
+        }
+    }
+
+    DrawBackgroundImage(plug->images[0]);
+    for (int i = 0; i < plug->no_of_buttons[HOME_SCREEN]; i++)
+        DrawMenuButton(plug->buttons[HOME_SCREEN][i]);
+    DrawTextEx(MenuFont, TextFormat("Currently Playing %s - %s", Title, Artist), (Vector2) {
+        GetRenderWidth() * 1/100.0, GetRenderHeight() * 1/100.0
+    }, 24 * GetRenderHeight()/600.0, 1, DARKGREEN);
+
+
+    DrawTextEx(MenuFont, "Choose A Key", (Vector2) {
+        0 + GetRenderWidth(), GetRenderHeight() * 1/1.8
+    }, 36 * GetRenderHeight()/600.0, 1, (Color) {
+        0, 255, 255, 255
+    });
+    DrawTextEx(MenuFont, "Choose A Scale", (Vector2) {
+        GetRenderWidth() * 1/2.0 + GetRenderWidth(), GetRenderHeight() * 1/1.8
+    }, 36 * GetRenderHeight()/600.0, 1, (Color) {
+        0, 255, 255, 255
+    });
+    for (int i= 0; i < plug->no_of_buttons[INTERVAL_SETTING_SCREEN]; i++) {
+        DrawMenuButton(plug->buttons[INTERVAL_SETTING_SCREEN][i]);
+    }
+    EndMode2D();
+    EndDrawing();
+}
+
+void ScreenTransitionIntSettingToInt(Plug *plug) {
+    Vector3 target = {0, 2, 2};
+    plug->camera.position.x = Lerp(plug->camera.position.x, target.x, 0.04);
+    plug->camera.position.y = Lerp(plug->camera.position.y, target.y, 0.04);
+    plug->camera.position.z = Lerp(plug->camera.position.z, target.z, 0.04);
+    float tolerance = 0.1;
+    target.x += tolerance;
+    target.y += tolerance;
+    target.z += tolerance;
+    if (plug->camera.position.x <= target.x  && plug->camera.position.y <= target.y && plug->camera.position.z <= target.z) {
+        plug->screen_transition = false;
+        printf("done\n");
+    }
+
+}
+
+void ScreenTransitionIntToPause(Plug *plug) {
+    if (!IsMusicStreamPlaying(plug->music[plug->current_music_index])) {
+        PlayMusicStream(plug->music[plug->current_music_index]);
+        read_id3v2(plug->music_file[plug->current_music_index]);
+    }
+    UpdateMusicStream(plug->music[plug->current_music_index]);
+
+    float stiffness = 100;
+    float damping = 10;
+    float displacement = GetRenderHeight() - offset;
+    float springForce = stiffness * displacement;
+    float dampingForce = -damping * velocity;
+    float force = springForce + dampingForce;
+    float speed = fabsf(velocity);
+    float tolerance = 0.1;
+    velocity += force * GetFrameTime();
+    offset += velocity * GetFrameTime();
+    displacement = fabsf(displacement);
+    if (displacement < tolerance && speed < tolerance) {
+        offset = GetRenderHeight();
+        plug->screen_transition = false;
+        plug->camera2d.offset.y = -offset;
+        offset = 0;
+        velocity = 0;
+    } else {
+        plug->camera2d.offset.y = -offset;
+    }
+
+    BeginDrawing();
+    ClearBackground(BROWN);
+
+    BeginMode3D(plug->camera);
+
+    DrawPlaneModel();
+    DrawPiano();
+
+    DrawModel(lightCube, lightPosition, 0.5f, YELLOW);
+    for (int i = 0; i < 4; i++) {
+        if (note_pool[i] > -1) {
+            DrawBoundingBoxAsCube(keyBoxes[note_pool[i]], BLUE);
+        }
+    }
+
+    EndMode3D();
+    BeginMode2D(plug->camera2d);
+    for (int i = 0; i < plug->no_of_buttons[INTERVAL_SCREEN]; i++)
+        DrawMenuButton(plug->buttons[INTERVAL_SCREEN][i]);
+
+    AlignScreenButtons(
+        MENU_BUTTON_HEIGHT,
+        MENU_BUTTON_WIDTH,
+        GetRenderWidth() * 3/4.0,
+        GetRenderHeight(),
+        GetRenderHeight()/ 20.0,
+        plug->no_of_buttons[PAUSE_SCREEN],
+        plug->buttons[PAUSE_SCREEN]
+    );
+
+    Texture2D image = plug->images[1];
+    Rectangle dstRec1 = {0, GetRenderHeight(), GetRenderWidth(), GetRenderHeight()};
+    NPatchInfo ninePatchInfo1 = { (Rectangle){ 0.0f, 0.0f, image.width, image.height }, 0, 0, 0, 0, NPATCH_NINE_PATCH };
+    DrawTextureNPatch(image, ninePatchInfo1, dstRec1, Vector2Zero(), 0, RAYWHITE);
+    for (int i = 0; i < plug->no_of_buttons[PAUSE_SCREEN]; i++)
+        DrawMenuButton(plug->buttons[PAUSE_SCREEN][i]);
+    DrawTextEx(MenuFont, TextFormat("Currently Playing %s - %s", Title, Artist), (Vector2) {
+        GetRenderWidth() * 1/100.0, GetRenderHeight() + GetRenderHeight() * 1/100.0
+    }, 24 * GetRenderHeight()/600.0, 1, DARKBROWN);
+
+    DrawFPS(10, 10);
+    EndMode2D();
+    EndDrawing();
+
+}
+
+void AlignScreenButtons(float height, float width, float x, float y, float padding, int no_of_buttons, MenuButton *buttons) {
+    for (int i = 0; i < no_of_buttons; i++) {
+        buttons[i].bound = (Rectangle) {
+            .width = width,
+            .height = height,
+            .x = x,
+            .y = (float)GetRenderHeight()/(no_of_buttons + 1) - height/2 + (i*(height + padding)) + y
+        };
+
+    }
+}
+
+void ScreenTransitionPauseToInt(Plug *plug) {
+    float target = GetRenderHeight();
+    plug->camera2d.offset.y = Lerp(plug->camera2d.offset.y, target, 0.1);
+    target -= 5;
+    if (plug->camera2d.offset.y >= target) {
+        plug->screen_transition = false;
+    }
+    BeginDrawing();
+    ClearBackground(BROWN);
+
+    BeginMode3D(plug->camera);
+
+    DrawPlaneModel();
+    DrawPiano();
+
+    DrawModel(lightCube, lightPosition, 0.5f, YELLOW);
+    for (int i = 0; i < 4; i++) {
+        if (note_pool[i] > -1) {
+            DrawBoundingBoxAsCube(keyBoxes[note_pool[i]], BLUE);
+        }
+    }
+
+    EndMode3D();
+    AlignScreenButtons(
+        MENU_BUTTON_HEIGHT,
+        MENU_BUTTON_WIDTH,
+        GetRenderWidth() * 3/4.0,
+        0,
+        GetRenderHeight()/ 20.0,
+        plug->no_of_buttons[INTERVAL_SCREEN],
+        plug->buttons[INTERVAL_SCREEN]
+    );
+    for (int i = 0; i < plug->no_of_buttons[INTERVAL_SCREEN]; i++)
+        DrawMenuButton(plug->buttons[INTERVAL_SCREEN][i]);
+    BeginMode2D(plug->camera2d);
+
+    AlignScreenButtons(
+        MENU_BUTTON_HEIGHT,
+        MENU_BUTTON_WIDTH,
+        GetRenderWidth() * 3/4.0,
+        0,
+        GetRenderHeight()/ 20.0,
+        plug->no_of_buttons[PAUSE_SCREEN],
+        plug->buttons[PAUSE_SCREEN]
+    );
+
+    DrawBackgroundImage(plug->images[1]);
+    for (int i = 0; i < plug->no_of_buttons[PAUSE_SCREEN]; i++)
+        DrawMenuButton(plug->buttons[PAUSE_SCREEN][i]);
+    DrawTextEx(MenuFont, TextFormat("Currently Playing %s - %s", Title, Artist), (Vector2) {
+        GetRenderWidth() * 1/100.0, GetRenderHeight() * 1/100.0
+    }, 24 * GetRenderHeight()/600.0, 1, DARKBROWN);
+
+    DrawFPS(10, 10);
+    EndMode2D();
+    EndDrawing();
+
+}
+
+int GenNote(void) {
+    return GetRandomValue(0, NO_OF_NOTES - 1);
+}
+
+
+const char* Key_to_text(int key) {
+    switch (key) {
+    case 0:
+        return "C";
+    case 1:
+        return "C#";
+    case 2:
+        return "D";
+    case 3:
+        return "D#";
+    case 4:
+        return "E";
+    case 5:
+        return "F";
+    case 6:
+        return "F#";
+    case 7:
+        return "G";
+    case 8:
+        return "G#";
+    case 9:
+        return "A";
+    case 10:
+        return "A#";
+    case 11:
+        return "B";
+    default:
+        return "";
+    }
 }
