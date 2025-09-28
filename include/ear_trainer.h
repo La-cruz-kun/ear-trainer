@@ -44,7 +44,8 @@ typedef enum {
 } Actual_Note;
 
 typedef enum {
-    MAJOR, MINOR
+    MAJOR = 0, MINOR = 1,
+    SCALE_LENGTH = 7
 } Scale;
 
 typedef enum {

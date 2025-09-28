@@ -5,7 +5,7 @@
 #define NO_OF_IMAGES 40
 #define MAX_NUM_OF_BUTTON 15
 #define NO_OF_MUSIC 5
-#define POOL_SIZE 4
+#define POOL_SIZE 6
 #define MENU_BUTTON_WIDTH 0.16 * GetRenderWidth()
 #define MENU_BUTTON_HEIGHT 0.08 * GetRenderWidth()
 
@@ -25,6 +25,7 @@ typedef struct {
     int scale;
     int score;
     bool player_respond;
+    char interval_feedback[8];
     Camera camera;
     Camera2D camera2d;
     float time;
@@ -46,12 +47,13 @@ void LoadUi(Plug *plug);
 void LoadResources(Plug *plug);
 void LoadSoundInstrument(void);
 void CheckKeyPress(void);
-int GenNote(void);
+int GenNote(int key, Scale scale);
 
 void ScreenTransitionIntSettingToInt(Plug *plug);
 void ScreenTransitionHomeToIntSetting(Plug *plug);
 void ScreenTransitionIntToPause(Plug *plug);
 void ScreenTransitionPauseToInt(Plug *plug);
+void ScreenTransitionFreeToPause(Plug *plug);
 
 void AlignScreenButtons(float height, float width, float x, float y, float padding, int no_of_buttons, MenuButton *buttons);
 const char* Key_to_text(int key);
