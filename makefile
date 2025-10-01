@@ -5,7 +5,6 @@ INC_SRC = $(wildcard  $(SRC_DIR)/*.c)
 CC = clang
 
 ear_trainer: src/main.c
-	$(CC) -fPIC $(CFLAGS) -Llib -Iinclude -shared $(INC_SRC) src/plug.c -o build/libplug.so $(LIBS)
 	$(CC) $(CFLAGS) -Llib -Iinclude $(INC_SRC) src/main.c -o build/ear_trainer $(LIBS)
 
 

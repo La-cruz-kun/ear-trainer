@@ -1,11 +1,21 @@
 #ifndef EAR_TRAINER_H
 #define EAR_TRAINER_H
+#include "parser.h"
 #include <raylib.h>
 #include <raymath.h>
 #include <stdio.h>
+#define NO_OF_IMAGES 40
+#define MAX_NUM_OF_BUTTON 15
+#define NO_OF_MUSIC 5
+#define POOL_SIZE 6
+#define MENU_BUTTON_WIDTH 0.16 * GetRenderWidth ()
+#define MENU_BUTTON_HEIGHT 0.08 * GetRenderWidth ()
+#define NOTE_N 6 * SCALE_LENGTH
 
 enum Screen
 {
+    LOADING_SCREEN,
+    LOGO_SCREEN,
     HOME_SCREEN,
     INTERVAL_SCREEN,
     INTERVAL_SETTING_SCREEN,
@@ -31,6 +41,74 @@ typedef struct
     MenuButtonAction action;
     bool is;
 } MenuButton;
+
+typedef struct
+{
+    KeyboardKey key;
+    int value;
+} KeyboardHashMap;
+
+enum Models
+{
+    PIANO,
+    PLANE,
+    LIGHT_CUBE,
+    NO_OF_MODELS
+};
+
+enum Shaders
+{
+    PBR_SHADER,
+    PLANE_SHADER,
+    LIGHT_SHADER,
+    NO_OF_SHADERS
+};
+
+enum ShaderLoc
+{
+    LIGHT_POS_LOC,
+    LIGHT_AMB_LOC,
+    LIGHT_DIFF_LOC,
+    LIGHT_SPEC_LOC,
+    LIGHT_CONST_LOC,
+    LIGHT_LINEAR_LOC,
+    LIGHT_QUADRATIC_LOC,
+    VIEW_POS_LOC,
+    NO_OF_SHADER_LOC
+};
+
+enum Maps
+{
+    PIANO_ALBEDO,
+    PIANO_METALLIC_ROUGHNESS,
+    PIANO_NORMAL,
+
+    PLANE_ALBEDO,
+    PLANE_ROUGHNESS,
+    PLANE_NORMAL,
+    PLANE_METALLIC,
+    PLANE_AO,
+
+    // Material1: Bench
+    BENCH_ALBEDO,
+    BENCH_METALLIC_ROUGHNESS,
+    BENCH_NORMAL,
+
+    NO_OF_MAPS
+};
+
+typedef struct
+{
+    Vector3 lightPosition;
+    Vector3 lightAmbient;
+    Vector3 lightDiffuse;
+    Vector3 lightSpecular;
+
+    float lightConstant;
+    float lightLinear;
+    float lightQuadratic;
+
+} Light;
 
 typedef enum
 {
@@ -171,4 +249,63 @@ bool IsMenuButtonPressed (MenuButton *button);
 MenuButton CreateMenuButton (Texture image, const char *text, Color text_color,
                              Rectangle bound);
 void calcMenuButtonPosition (MenuButton *button, ...);
+
+void ScreenTransitionIntSettingToInt (void);
+void ScreenTransitionHomeToIntSetting (void);
+void ScreenTransitionIntToPause (void);
+void ScreenTransitionPauseToInt (void);
+void ScreenTransitionFreeToPause (void);
+void UpdateHomeScreen (void);
+
+void DrawBoundingBoxAsCube (BoundingBox box, Color color);
+int MapPianoNotes (void);
+int LoadPianoModel (void);
+void DrawPiano (void);
+void DrawPlaneModel (void);
+int LoadPlaneModel (void);
+int LoadUi (void);
+int LoadResources (void);
+int LoadSoundInstrument (void);
+void CheckKeyPress (void);
+int GenNote (int key, Scale scale);
+
+void AlignScreenButtons (float height, float width, float x, float y,
+                         float padding, int no_of_buttons,
+                         MenuButton *buttons);
+const char *Key_to_text (int key);
+
+int init (void);
+void update (void);
+void UpdateLoadingScreen (void);
+void UpdateFreeScreen (void);
+void UpdateIntervalSettingScreen (void);
+void UpdateIntervalScreen (void);
+void UpdatePauseScreen (void);
+void UpdateTransition (void);
+
+void DrawLoadingScreen (void);
+void DrawHomeScreen (void);
+void DrawFreeScreen (void);
+void DrawIntervalSettingScreen (void);
+void DrawIntervalScreen (void);
+void DrawPauseScreen (void);
+void DrawTransition (void);
+
+bool FinishLoadingScreen (void);
+void ChangeToScreen (enum Screen screen);
+
+extern Camera2D camera2d;
+extern Music music[NO_OF_MUSIC];
+extern const char *music_file[NO_OF_MUSIC];
+extern int current_music_index;
+extern int no_of_buttons[NO_OF_SCREEN];
+extern MenuButton buttons[NO_OF_SCREEN][MAX_NUM_OF_BUTTON];
+extern enum Screen current_screen;
+extern enum Screen former_screen;
+extern bool looped_once;
+extern bool screen_transition;
+extern bool quit;
+extern Texture images[NO_OF_IMAGES];
+extern Font MenuFont;
+
 #endif // EAR_TRAINER_H

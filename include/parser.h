@@ -1,3 +1,5 @@
+#ifndef PARSER_H
+#define PARSER_H
 #include <iconv.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,19 +8,19 @@
 #define HEADER_SIZE 10
 #define SIZE 100
 
-unsigned char Title[SIZE];
-unsigned char Album[SIZE];
-unsigned char Artist[SIZE];
-unsigned char Value[SIZE] = { 0 };
-unsigned char TEMP[SIZE] = { 0 };
+static unsigned char Title[SIZE];
+static unsigned char Album[SIZE];
+static unsigned char Artist[SIZE];
+static unsigned char Value[SIZE] = { 0 };
+static unsigned char TEMP[SIZE] = { 0 };
 
-unsigned int
+static inline unsigned int
 syncsafe_to_int (unsigned char *bytes)
 {
     return (bytes[0] << 21) | (bytes[1] << 14) | (bytes[2] << 7) | bytes[3];
 }
 
-void
+static inline void
 sanitize_filename (char *filename)
 {
     char *src = filename;
@@ -35,7 +37,7 @@ sanitize_filename (char *filename)
     *dst = '\0';
 }
 
-void
+static inline void
 r_file (void)
 {
     strncpy ((char *)TEMP, (char *)Value, sizeof (TEMP));
@@ -49,7 +51,7 @@ r_file (void)
         }
 }
 
-void
+static inline void
 read_frame (FILE *file, char *frame_id, unsigned int tag_size)
 {
     unsigned int frame_start = ftell (file);
@@ -118,7 +120,7 @@ read_frame (FILE *file, char *frame_id, unsigned int tag_size)
     Value[0] = '\0';
 }
 
-void
+static inline void
 read_id3v2 (const char *filename)
 {
     printf ("%s", filename);
@@ -155,3 +157,4 @@ read_id3v2 (const char *filename)
 
     fclose (file);
 }
+#endif
