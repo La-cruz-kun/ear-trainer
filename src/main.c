@@ -3,13 +3,10 @@
 #include <rlgl.h>
 #include <stdio.h>
 #define STB_DS_IMPLEMENTATION
-#include "pthread.h" // POSIX style threads management
 #include <raymath.h>
 #include <stb_ds.h>
 
 #include <stdatomic.h> // C11 atomic data types
-
-#include <time.h> // Required for: clock()
 
 #define begin                                                                 \
     static int _state = 0;                                                    \
@@ -37,19 +34,24 @@
     while (0)
 #define end }
 
+float offset = 0;
+float velocity = 0;
+
 BoundingBox keyBoxes[NO_OF_NOTES];
 Sound sound[NO_OF_NOTES];
 bool key_pressed;
 KeyboardHashMap *Key_to_note;
 int note_pool[POOL_SIZE];
 unsigned int currentOctave;
-Font MenuFont = { 0 };
+Font font1 = { 0 };
+Font font2 = { 0 };
+Font font3 = { 0 };
 Color note_color;
 
 Model models[NO_OF_MODELS];
 Light lights;
 Shader shaders[NO_OF_SHADERS];
-int shaderLoc[NO_OF_SHADER_LOC];
+int shaderLoc[NO_OF_SHADER_LOC] = { 0 };
 Texture2D maps[NO_OF_MAPS];
 
 enum Screen current_screen = { 0 };
@@ -58,23 +60,20 @@ Texture images[NO_OF_IMAGES] = { 0 };
 Music music[NO_OF_MUSIC] = { 0 };
 const char *music_file[NO_OF_MUSIC] = { 0 };
 int current_music_index = 0;
-int current_note;
+int current_note = -1;
 MenuButton buttons[NO_OF_SCREEN][MAX_NUM_OF_BUTTON] = { 0 };
 int no_of_buttons[NO_OF_SCREEN] = { 0 };
-int key;
-int scale;
-int score;
-bool player_respond;
+int key = -1;
+int scale = -1;
+int score = 0;
+bool player_respond = false;
 char interval_feedback[8];
-Camera camera;
+Camera camera = { 0 };
 Camera2D camera2d = { 0 };
 float animTime;
 bool screen_transition = false;
 bool quit = false;
 bool looped_once = false;
-
-float offset = 0;
-float velocity = 0;
 
 int note_pool[POOL_SIZE] = { -1, -1, -1, -1 };
 Color note_color = BLUE;
@@ -106,6 +105,7 @@ main (void)
     InitWindow (16, 9, "Ear Trainer");
     InitAudioDevice ();
     current_screen = LOADING_SCREEN;
+    InitLoadingScreen ();
 
     SetTargetFPS (60);
     while (!WindowShouldClose () && !quit)
@@ -125,8 +125,14 @@ init (void)
     current_note = -1;
     int codepointCount = 0;
     int *codepoints = LoadCodepoints (text, &codepointCount);
-    MenuFont = LoadFontEx ("resources/fonts/0xProtoNerdFontMono-Italic.ttf",
-                           64, codepoints, codepointCount);
+    font1 = LoadFontEx ("resources/fonts/0xProtoNerdFontMono-Italic.ttf", 64,
+                        codepoints, codepointCount);
+    font2
+        = LoadFontEx ("resources/fonts/OpenDyslexicMNerdFontPropo-Regular.otf",
+                      64, codepoints, codepointCount);
+    font3
+        = LoadFontEx ("resources/fonts/Junicode-Regular.ttf",
+                      128, codepoints, codepointCount);
     yield ();
     camera.position = (Vector3){ 0, 2, 2 };
     camera.target = (Vector3){ 0, 0, -0.2 };
@@ -190,6 +196,10 @@ update (void)
                 case HOME_SCREEN:
                     {
                         UpdateHomeScreen ();
+                        if (FinishHomeScreen () == 1)
+                            TransitionToScreen (INTERVAL_SETTING_SCREEN);
+                        else if (FinishHomeScreen () == 2)
+                            TransitionToScreen (FREE_SCREEN);
                         break;
                     }
                 case FREE_SCREEN:
@@ -222,32 +232,37 @@ update (void)
         }
 
     BeginDrawing ();
-    ClearBackground (RAYWHITE);
-    switch (current_screen)
+    ClearBackground (BLACK);
+    if (!screen_transition)
         {
-        case LOADING_SCREEN:
-            DrawLoadingScreen ();
-            break;
-        case HOME_SCREEN:
-            DrawHomeScreen ();
-            break;
-        case FREE_SCREEN:
-            DrawFreeScreen ();
-            break;
-        case INTERVAL_SETTING_SCREEN:
-            DrawIntervalSettingScreen ();
-            break;
-        case INTERVAL_SCREEN:
-            DrawIntervalScreen ();
-            break;
-        case PAUSE_SCREEN:
-            DrawPauseScreen ();
-            break;
-        default:
-            break;
+            switch (current_screen)
+                {
+                case LOADING_SCREEN:
+                    DrawLoadingScreen ();
+                    break;
+                case HOME_SCREEN:
+                    DrawHomeScreen ();
+                    break;
+                case FREE_SCREEN:
+                    DrawFreeScreen ();
+                    break;
+                case INTERVAL_SETTING_SCREEN:
+                    DrawIntervalSettingScreen ();
+                    break;
+                case INTERVAL_SCREEN:
+                    DrawIntervalScreen ();
+                    break;
+                case PAUSE_SCREEN:
+                    DrawPauseScreen ();
+                    break;
+                default:
+                    break;
+                }
         }
-    if (screen_transition)
-        DrawTransition ();
+    else
+        {
+            DrawTransition ();
+        }
     EndDrawing ();
 }
 
@@ -1168,93 +1183,6 @@ CheckKeyPress (void)
 }
 
 void
-ScreenTransitionHomeToIntSetting (void)
-{
-    // Spring bounce animation
-    float stiffness = 100;
-    float damping = 10;
-    float displacement = GetRenderWidth () - offset;
-    float springForce = stiffness * displacement;
-    float dampingForce = -damping * velocity;
-    float force = springForce + dampingForce;
-    float speed = fabsf (velocity);
-    float tolerance = 1;
-    velocity += force * GetFrameTime ();
-    offset += velocity * GetFrameTime ();
-    displacement = fabsf (displacement);
-    if (displacement < tolerance && speed < tolerance)
-        {
-            offset = GetRenderWidth ();
-            screen_transition = false;
-            camera2d.offset.x = -offset;
-            offset = 0;
-            velocity = 0;
-        }
-    else
-        {
-            camera2d.offset.x = -offset;
-        }
-    BeginDrawing ();
-    ClearBackground (BLACK);
-    BeginMode2D (camera2d);
-    for (int i = 0; i < no_of_buttons[INTERVAL_SETTING_SCREEN]; i++)
-        {
-            if (i < 12)
-                {
-                    float padding = GetRenderHeight () / 20.0 / 12.0;
-                    float height = MENU_BUTTON_HEIGHT / 1.9;
-                    buttons[INTERVAL_SETTING_SCREEN][i].bound = (Rectangle){
-                        .width = MENU_BUTTON_WIDTH * 0.8,
-                        .height = height,
-                        .x = GetRenderWidth () * 1 / 4.0 + GetRenderWidth (),
-                        .y = (float)GetRenderHeight ()
-                                 / (no_of_buttons[INTERVAL_SETTING_SCREEN] + 1)
-                             - height / 2 + (i * (height + padding))
-                    };
-                }
-            else
-                {
-                    float height = MENU_BUTTON_HEIGHT;
-                    float padding = GetRenderHeight () / 20.0;
-                    buttons[INTERVAL_SETTING_SCREEN][i].bound = (Rectangle){
-                        .width = MENU_BUTTON_HEIGHT * 1.2,
-                        .height = height,
-                        .x = GetRenderWidth () * 3 / 4.0 + GetRenderWidth (),
-                        .y = (float)GetRenderHeight ()
-                                 / (no_of_buttons[INTERVAL_SETTING_SCREEN] + 1
-                                    - 12)
-                             - height / 2 + ((i - 12) * (height + padding))
-                    };
-                }
-        }
-
-    DrawBackgroundImage (images[0]);
-    for (int i = 0; i < no_of_buttons[HOME_SCREEN]; i++)
-        DrawMenuButton (buttons[HOME_SCREEN][i]);
-    DrawTextEx (MenuFont,
-                TextFormat ("Currently Playing %s - %s", Title, Artist),
-                (Vector2){ GetRenderWidth () * 1 / 100.0,
-                           GetRenderHeight () * 1 / 100.0 },
-                24 * GetRenderHeight () / 600.0, 1, DARKGREEN);
-
-    DrawTextEx (
-        MenuFont, "Choose A Key",
-        (Vector2){ 0 + GetRenderWidth (), GetRenderHeight () * 1 / 1.8 },
-        36 * GetRenderHeight () / 600.0, 1, (Color){ 0, 255, 255, 255 });
-    DrawTextEx (MenuFont, "Choose A Scale",
-                (Vector2){ GetRenderWidth () * 1 / 2.0 + GetRenderWidth (),
-                           GetRenderHeight () * 1 / 1.8 },
-                36 * GetRenderHeight () / 600.0, 1,
-                (Color){ 0, 255, 255, 255 });
-    for (int i = 0; i < no_of_buttons[INTERVAL_SETTING_SCREEN]; i++)
-        {
-            DrawMenuButton (buttons[INTERVAL_SETTING_SCREEN][i]);
-        }
-    EndMode2D ();
-    EndDrawing ();
-}
-
-void
 ScreenTransitionIntSettingToInt (void)
 {
     Vector3 target = { 0, 2, 2 };
@@ -1349,7 +1277,7 @@ ScreenTransitionIntToPause (void)
     for (int i = 0; i < no_of_buttons[PAUSE_SCREEN]; i++)
         DrawMenuButton (buttons[PAUSE_SCREEN][i]);
     DrawTextEx (
-        MenuFont, TextFormat ("Currently Playing %s - %s", Title, Artist),
+        font1, TextFormat ("Currently Playing %s - %s", Title, Artist),
         (Vector2){ GetRenderWidth () * 1 / 100.0,
                    GetRenderHeight () + GetRenderHeight () * 1 / 100.0 },
         24 * GetRenderHeight () / 600.0, 1, DARKBROWN);
@@ -1435,7 +1363,7 @@ ScreenTransitionFreeToPause (void)
     for (int i = 0; i < no_of_buttons[PAUSE_SCREEN]; i++)
         DrawMenuButton (buttons[PAUSE_SCREEN][i]);
     DrawTextEx (
-        MenuFont, TextFormat ("Currently Playing %s - %s", Title, Artist),
+        font1, TextFormat ("Currently Playing %s - %s", Title, Artist),
         (Vector2){ GetRenderWidth () * 1 / 100.0,
                    GetRenderHeight () + GetRenderHeight () * 1 / 100.0 },
         24 * GetRenderHeight () / 600.0, 1, DARKBROWN);
@@ -1505,8 +1433,7 @@ ScreenTransitionPauseToInt (void)
     DrawBackgroundImage (images[1]);
     for (int i = 0; i < no_of_buttons[PAUSE_SCREEN]; i++)
         DrawMenuButton (buttons[PAUSE_SCREEN][i]);
-    DrawTextEx (MenuFont,
-                TextFormat ("Currently Playing %s - %s", Title, Artist),
+    DrawTextEx (font1, TextFormat ("Currently Playing %s - %s", Title, Artist),
                 (Vector2){ GetRenderWidth () * 1 / 100.0,
                            GetRenderHeight () * 1 / 100.0 },
                 24 * GetRenderHeight () / 600.0, 1, DARKBROWN);
@@ -1578,8 +1505,47 @@ ChangeToScreen (enum Screen screen)
 void
 UpdateTransition (void)
 {
+    switch (former_screen)
+        {
+        case HOME_SCREEN:
+            switch (current_screen)
+                {
+                case INTERVAL_SETTING_SCREEN:
+                    UpdateHomeToIntSetting ();
+                    break;
+                default:
+                    break;
+                }
+
+            break;
+        default:
+            break;
+        }
 }
 void
 DrawTransition (void)
 {
+    switch (former_screen)
+        {
+        case HOME_SCREEN:
+            switch (current_screen)
+                {
+                case INTERVAL_SETTING_SCREEN:
+                    DrawHomeToIntSetting ();
+                    break;
+                default:
+                    break;
+                }
+            break;
+        default:
+            break;
+        }
+}
+
+void
+TransitionToScreen (enum Screen screen)
+{
+    screen_transition = true;
+    former_screen = current_screen;
+    current_screen = screen;
 }

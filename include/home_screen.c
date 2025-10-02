@@ -1,5 +1,7 @@
 #include "ear_trainer.h"
 
+static int finish = 0;
+
 void
 UpdateHomeScreen (void)
 {
@@ -29,7 +31,7 @@ UpdateHomeScreen (void)
     if (IsMenuButtonPressed (&buttons[HOME_SCREEN][0]))
         {
             former_screen = current_screen;
-            current_screen = INTERVAL_SETTING_SCREEN;
+            finish = 1;
             looped_once = false;
             screen_transition = true;
         }
@@ -55,11 +57,15 @@ DrawHomeScreen (void)
     DrawBackgroundImage (images[0]);
     for (int i = 0; i < no_of_buttons[HOME_SCREEN]; i++)
         DrawMenuButton (buttons[HOME_SCREEN][i]);
-    DrawTextEx (MenuFont,
+    DrawTextEx (font1,
                 TextFormat ("Currently Playing %s - %s", Title, Artist),
                 (Vector2){ GetRenderWidth () * 1 / 100.0,
                            GetRenderHeight () * 1 / 100.0 },
                 24 * GetRenderHeight () / 600.0, 1, DARKGREEN);
     DrawFPS (10, 10);
     EndMode2D ();
+}
+
+int FinishHomeScreen(void){
+  return finish;
 }

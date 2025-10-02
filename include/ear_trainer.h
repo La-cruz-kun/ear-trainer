@@ -22,6 +22,7 @@ enum Screen
     OPTION_SCREEN,
     PAUSE_SCREEN,
     FREE_SCREEN,
+    SETTING_SCREEN,
     NO_OF_SCREEN
 };
 
@@ -275,6 +276,8 @@ void AlignScreenButtons (float height, float width, float x, float y,
 const char *Key_to_text (int key);
 
 int init (void);
+void InitLoadingScreen (void);
+
 void update (void);
 void UpdateLoadingScreen (void);
 void UpdateFreeScreen (void);
@@ -282,6 +285,7 @@ void UpdateIntervalSettingScreen (void);
 void UpdateIntervalScreen (void);
 void UpdatePauseScreen (void);
 void UpdateTransition (void);
+void UpdateHomeToIntSetting (void);
 
 void DrawLoadingScreen (void);
 void DrawHomeScreen (void);
@@ -290,11 +294,15 @@ void DrawIntervalSettingScreen (void);
 void DrawIntervalScreen (void);
 void DrawPauseScreen (void);
 void DrawTransition (void);
+void DrawHomeToIntSetting (void);
 
 bool FinishLoadingScreen (void);
+int FinishHomeScreen (void);
 void ChangeToScreen (enum Screen screen);
+void TransitionToScreen (enum Screen screen);
 
 extern Camera2D camera2d;
+extern Camera camera;
 extern Music music[NO_OF_MUSIC];
 extern const char *music_file[NO_OF_MUSIC];
 extern int current_music_index;
@@ -306,6 +314,17 @@ extern bool looped_once;
 extern bool screen_transition;
 extern bool quit;
 extern Texture images[NO_OF_IMAGES];
-extern Font MenuFont;
+extern Shader shaders[NO_OF_SHADERS];
+extern Vector3 lightPosition;
+extern Vector3 lightAmbient;
+extern Vector3 lightDiffuse;
+extern Vector3 lightSpecular;
+extern int shaderLoc[NO_OF_SHADER_LOC];
+extern int key;
+extern int scale;
+
+extern Font font1;
+extern Font font2;
+extern Font font3;
 
 #endif // EAR_TRAINER_H
