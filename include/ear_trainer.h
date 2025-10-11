@@ -1,10 +1,11 @@
 #ifndef EAR_TRAINER_H
 #define EAR_TRAINER_H
 #include "parser.h"
+#include "stb_ds.h"
 #include <raylib.h>
 #include <raymath.h>
 #include <stdio.h>
-#define NO_OF_IMAGES 40
+#define NO_OF_IMAGES 50
 #define MAX_NUM_OF_BUTTON 15
 #define NO_OF_MUSIC 5
 #define POOL_SIZE 6
@@ -22,8 +23,10 @@ enum Screen
     OPTION_SCREEN,
     PAUSE_SCREEN,
     FREE_SCREEN,
+    CHORD_SCREEN,
     SETTING_SCREEN,
-    NO_OF_SCREEN
+    NO_OF_SCREEN,
+    NONE
 };
 
 typedef enum
@@ -239,6 +242,23 @@ typedef enum
     MAJOR_SEVENTH,
     OCTAVE
 } Intervals;
+
+typedef enum
+{
+    I,
+    ii,
+    iii,
+    IV,
+    V,
+    vi,
+    vii
+} ChordType;
+
+typedef struct
+{
+    int chord[4];
+} ChordNotes;
+
 // draw.c
 void DrawBackgroundImage (Texture image);
 void DrawMenuButton (MenuButton button);
@@ -251,11 +271,6 @@ MenuButton CreateMenuButton (Texture image, const char *text, Color text_color,
                              Rectangle bound);
 void calcMenuButtonPosition (MenuButton *button, ...);
 
-void ScreenTransitionIntSettingToInt (void);
-void ScreenTransitionHomeToIntSetting (void);
-void ScreenTransitionIntToPause (void);
-void ScreenTransitionPauseToInt (void);
-void ScreenTransitionFreeToPause (void);
 void UpdateHomeScreen (void);
 
 void DrawBoundingBoxAsCube (BoundingBox box, Color color);
@@ -269,6 +284,7 @@ int LoadResources (void);
 int LoadSoundInstrument (void);
 void CheckKeyPress (void);
 int GenNote (int key, Scale scale);
+void GenChord (int key);
 
 void AlignScreenButtons (float height, float width, float x, float y,
                          float padding, int no_of_buttons,
@@ -277,6 +293,7 @@ const char *Key_to_text (int key);
 
 int init (void);
 void InitLoadingScreen (void);
+void InitChordScreen (void);
 
 void update (void);
 void UpdateLoadingScreen (void);
@@ -284,8 +301,19 @@ void UpdateFreeScreen (void);
 void UpdateIntervalSettingScreen (void);
 void UpdateIntervalScreen (void);
 void UpdatePauseScreen (void);
+void UpdateSettingScreen (void);
+void UpdateChordScreen (void);
 void UpdateTransition (void);
+
 void UpdateHomeToIntSetting (void);
+void UpdateIntSettingToInt (void);
+void UpdateHomeToFree (void);
+void UpdateIntToPause (void);
+void UpdateFreeToPause (void);
+void UpdatePauseToInt (void);
+void UpdatePauseToFree (void);
+void UpdatePauseToHome (void);
+void UpdateIntSettingToChord (void);
 
 void DrawLoadingScreen (void);
 void DrawHomeScreen (void);
@@ -293,35 +321,59 @@ void DrawFreeScreen (void);
 void DrawIntervalSettingScreen (void);
 void DrawIntervalScreen (void);
 void DrawPauseScreen (void);
+void DrawSettingScreen (void);
+void DrawChordScreen (void);
 void DrawTransition (void);
+
 void DrawHomeToIntSetting (void);
+void DrawIntToPause (void);
+void DrawFreeToPause (void);
+void DrawPauseToInt (void);
+void DrawPauseToFree (void);
+void DrawPauseToHome (void);
 
 bool FinishLoadingScreen (void);
 int FinishHomeScreen (void);
+int FinishIntSettingScreen (void);
+int FinishPauseScreen (void);
+int FinishIntScreen (void);
+int FinishFreeScreen (void);
+int FinishSettingScreen (void);
+
 void ChangeToScreen (enum Screen screen);
 void TransitionToScreen (enum Screen screen);
 
 extern Camera2D camera2d;
 extern Camera camera;
 extern Music music[NO_OF_MUSIC];
+extern Music drone[OCTAVE];
 extern const char *music_file[NO_OF_MUSIC];
-extern int current_music_index;
-extern int no_of_buttons[NO_OF_SCREEN];
 extern MenuButton buttons[NO_OF_SCREEN][MAX_NUM_OF_BUTTON];
 extern enum Screen current_screen;
+extern enum Screen after_int_set_screen;
 extern enum Screen former_screen;
 extern bool looped_once;
 extern bool screen_transition;
 extern bool quit;
 extern Texture images[NO_OF_IMAGES];
 extern Shader shaders[NO_OF_SHADERS];
+
 extern Vector3 lightPosition;
 extern Vector3 lightAmbient;
 extern Vector3 lightDiffuse;
 extern Vector3 lightSpecular;
+
 extern int shaderLoc[NO_OF_SHADER_LOC];
+extern int current_music_index;
+extern int no_of_buttons[NO_OF_SCREEN];
+extern int note_pool[POOL_SIZE];
 extern int key;
 extern int scale;
+
+extern Sound sound[NO_OF_NOTES];
+extern KeyboardHashMap *Key_to_note;
+extern Model models[NO_OF_MODELS];
+extern BoundingBox keyBoxes[NO_OF_NOTES];
 
 extern Font font1;
 extern Font font2;

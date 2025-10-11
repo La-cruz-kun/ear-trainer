@@ -27,3 +27,19 @@ calcMenuButtonPosition (MenuButton *button, ...)
         }
     va_end (args);
 }
+
+void
+AlignScreenButtons (float height, float width, float x, float y, float padding,
+                    int no_of_buttons, MenuButton *buttons)
+{
+    for (int i = 0; i < no_of_buttons; i++)
+        {
+            buttons[i].bound = (Rectangle){
+                .width = width,
+                .height = height,
+                .x = x,
+                .y = (float)GetRenderHeight () / (no_of_buttons + 1)
+                     - height / 2 + (i * (height + padding)) + y
+            };
+        }
+}

@@ -9,7 +9,7 @@ ear_trainer: src/main.c
 
 
 test: src/test.c
-	$(CC) $(CFLAGS) -Llib  src/test.c -o build/test $(LIBS)
+	$(CC) $(CFLAGS) -Llib  -Iinclude src/test.c include/chord_parser.c -o build/test $(LIBS)
 
 test2: src/test2.c
 	$(CC) $(CFLAGS) -Llib  src/test2.c -o build/test2 $(LIBS)

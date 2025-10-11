@@ -1,7 +1,11 @@
-drone
-screen transition animation
-interval settings screen
-interval game logic
+[✅]drone
+[✅]screen transition animation
+[✅]interval settings screen
+[✅]interval game logic
+[] Settings Screen
+[] Main Menu
+[] score system
+[] statistics
 
 
 1181

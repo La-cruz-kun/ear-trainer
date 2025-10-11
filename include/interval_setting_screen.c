@@ -3,13 +3,15 @@
 static float offset = 0;
 static float velocity = 0;
 static MenuButton Ok = { 0 };
+static int finish = 0;
 
 void
 UpdateIntervalSettingScreen (void)
 {
+    finish = 0;
     camera.position = (Vector3){ 2, 4, 4 };
     Ok = CreateMenuButton (
-        images[10], "", WHITE,
+        images[38], "", WHITE,
         (Rectangle){ GetRenderWidth () * 1 / 2.0,
                      GetRenderHeight () - GetRenderHeight () * 0.2,
                      MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT });
@@ -95,6 +97,13 @@ UpdateIntervalSettingScreen (void)
                         }
                 }
         }
+    if (IsMenuButtonPressed (&Ok))
+        {
+            if (after_int_set_screen == INTERVAL_SCREEN)
+                finish = 1;
+            else if (after_int_set_screen == CHORD_SCREEN)
+                finish = 2;
+        }
 }
 void
 DrawIntervalSettingScreen (void)
@@ -103,13 +112,15 @@ DrawIntervalSettingScreen (void)
     DrawPlaneModel ();
     DrawPiano ();
     EndMode3D ();
-    DrawTextEx (
-        font1, "Choose A Key", (Vector2){ 0, GetRenderHeight () * 1 / 1.8 },
-        36 * GetRenderHeight () / 600.0, 1, (Color){ 0, 255, 255, 255 });
-    DrawTextEx (
-        font1, "Choose A Scale",
-        (Vector2){ GetRenderWidth () * 1 / 2.0, GetRenderHeight () * 1 / 1.8 },
-        36 * GetRenderHeight () / 600.0, 1, (Color){ 0, 255, 255, 255 });
+    DrawTextEx (font1, "Choose A Key",
+                (Vector2){ 0 + offset, GetRenderHeight () * 1 / 1.8 },
+                36 * GetRenderHeight () / 600.0, 1,
+                (Color){ 0, 255, 255, 255 });
+    DrawTextEx (font1, "Choose A Scale",
+                (Vector2){ GetRenderWidth () * 1 / 2.0 + offset,
+                           GetRenderHeight () * 1 / 1.8 },
+                36 * GetRenderHeight () / 600.0, 1,
+                (Color){ 0, 255, 255, 255 });
     for (int i = 0; i < no_of_buttons[INTERVAL_SETTING_SCREEN]; i++)
         {
             DrawMenuButton (buttons[INTERVAL_SETTING_SCREEN][i]);
@@ -118,18 +129,16 @@ DrawIntervalSettingScreen (void)
         {
             if (IsMenuButtonPressed (&Ok))
                 {
-                    former_screen = current_screen;
-                    current_screen = FREE_SCREEN;
-                    screen_transition = true;
+                    finish = 1;
                 }
             DrawMenuButton (Ok);
         }
-    DrawFPS (10, 10);
 }
 
 void
 UpdateHomeToIntSetting (void)
 {
+    camera.position = (Vector3){ 2, 4, 4 };
     // Spring bounce animation
     float stiffness = 100;
     float damping = 10;
@@ -138,7 +147,7 @@ UpdateHomeToIntSetting (void)
     float dampingForce = -damping * velocity;
     float force = springForce + dampingForce;
     float speed = fabsf (velocity);
-    float tolerance = 1;
+    float tolerance = 0.1;
     velocity += force * GetFrameTime ();
     offset += velocity * GetFrameTime ();
     displacement = fabsf (displacement);
@@ -212,4 +221,10 @@ DrawHomeToIntSetting (void)
             DrawMenuButton (buttons[INTERVAL_SETTING_SCREEN][i]);
         }
     EndMode2D ();
+}
+
+int
+FinishIntSettingScreen (void)
+{
+    return finish;
 }
