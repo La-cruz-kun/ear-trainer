@@ -8,6 +8,7 @@ static size_t progression_counter = 0;
 static ChordNotes current_chord_notes = { .chord = { -1, -1, -1, -1 } };
 static ChordNotes former_chord_notes = { .chord = { -1, -1, -1, -1 } };
 static int state = 0;
+static int random_prog = 0;
 
 void
 InitChordScreen (void)
@@ -29,7 +30,10 @@ UpdateChordScreen (void)
         {
             current_chord_notes = (ChordNotes){ .chord = { -1, -1, -1, -1 } };
             if (IsKeyReleased (KEY_ENTER))
-                state = 1;
+                {
+                    random_prog = GetRandomValue (0, progressions.size - 1);
+                    state = 1;
+                }
         }
 
     else if (state == 1)
@@ -87,7 +91,7 @@ UpdateIntSettingToChord (void)
 int
 GenChord (int key, int prog_number)
 {
-    if (progression_counter >= progressions.prog_length[0])
+    if (progression_counter >= progressions.prog_length[prog_number])
         {
             progression_counter = 0;
             state = 0;
@@ -95,7 +99,7 @@ GenChord (int key, int prog_number)
         }
     former_chord_notes = current_chord_notes;
     current_chord_notes = convert_chordT_to_chordN (
-        progressions.data[0][progression_counter], key);
+        progressions.data[prog_number][progression_counter], key);
     if (current_chord_notes.chord[0] == -1)
         {
             progression_counter = 0;
@@ -118,7 +122,6 @@ void
 PlayChordProg (int key)
 {
     key = key + OCTAVE * 3;
-    int random_prog = GetRandomValue (0, progressions.size - 1);
     if (framesCounter == 80)
         {
             if (!GenChord (key, random_prog))
