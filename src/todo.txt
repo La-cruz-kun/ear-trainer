@@ -6,6 +6,7 @@
 [] Main Menu
 [] score system
 [] statistics
+[✅] play chords
+[] add menu screen
 
 
-1181

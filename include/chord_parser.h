@@ -6,11 +6,21 @@
 typedef struct
 {
     ChordType **data;
+    size_t *prog_length;
     size_t size;
     size_t capacity;
 } Chord_Progs;
 
-int append_chord_prog (Chord_Progs *prog, ChordType *element);
+typedef struct
+{
+    ChordType *data;
+    size_t size;
+    size_t capacity;
+} ChordTypes;
+
+int append_chord_prog (Chord_Progs *prog, ChordType *element,
+                       size_t element_len);
+int append_chord (ChordTypes *CTs, ChordType CT);
 
 ChordType convert_str_to_chordT (char *chord);
 

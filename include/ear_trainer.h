@@ -12,6 +12,7 @@
 #define MENU_BUTTON_WIDTH 0.16 * GetRenderWidth ()
 #define MENU_BUTTON_HEIGHT 0.08 * GetRenderWidth ()
 #define NOTE_N 6 * SCALE_LENGTH
+#define MAX_CHORD_SIZE 4
 
 enum Screen
 {
@@ -256,7 +257,7 @@ typedef enum
 
 typedef struct
 {
-    int chord[4];
+    int chord[MAX_CHORD_SIZE];
 } ChordNotes;
 
 // draw.c
@@ -283,8 +284,12 @@ int LoadUi (void);
 int LoadResources (void);
 int LoadSoundInstrument (void);
 void CheckKeyPress (void);
+
 int GenNote (int key, Scale scale);
-void GenChord (int key);
+int GenChord (int key, int prog_number);
+void PlayChordProg (int key);
+void PlayChord (ChordNotes chord_notes);
+void TransitionChord (void);
 
 void AlignScreenButtons (float height, float width, float x, float y,
                          float padding, int no_of_buttons,

@@ -3,8 +3,11 @@
 #include <raylib.h>
 
 static int finish = 0;
-static int progression_counter = 0;
-static ChordNotes chord_notes = { .chord = { -1, -1, -1, -1 } };
+static int framesCounter = 0;
+static size_t progression_counter = 0;
+static ChordNotes current_chord_notes = { .chord = { -1, -1, -1, -1 } };
+static ChordNotes former_chord_notes = { .chord = { -1, -1, -1, -1 } };
+static int state = 0;
 
 void
 InitChordScreen (void)
@@ -14,10 +17,6 @@ InitChordScreen (void)
 void
 UpdateChordScreen (void)
 {
-    if (IsKeyReleased (KEY_ENTER))
-        {
-            GenChord (key);
-        }
     SetShaderValue (shaders[PBR_SHADER], shaderLoc[LIGHT_POS_LOC],
                     &lightPosition, SHADER_UNIFORM_VEC3);
     SetShaderValue (shaders[PBR_SHADER], shaderLoc[VIEW_POS_LOC],
@@ -26,6 +25,17 @@ UpdateChordScreen (void)
                     &lightPosition, SHADER_UNIFORM_VEC3);
     SetShaderValue (shaders[PLANE_SHADER], shaderLoc[VIEW_POS_LOC],
                     &camera.position, SHADER_UNIFORM_VEC3);
+    if (state == 0)
+        {
+            current_chord_notes = (ChordNotes){ .chord = { -1, -1, -1, -1 } };
+            if (IsKeyReleased (KEY_ENTER))
+                state = 1;
+        }
+
+    else if (state == 1)
+        {
+            PlayChordProg (key);
+        }
 }
 
 void
@@ -42,9 +52,10 @@ DrawChordScreen (void)
     /*     { */
     /*         DrawBoundingBoxAsCube (keyBoxes[note_pool[0]], note_color); */
     /*     } */
-    for (int i = 0; chord_notes.chord[i] > -1; i++)
+    for (int i = 0; current_chord_notes.chord[i] > -1; i++)
         {
-            DrawBoundingBoxAsCube (keyBoxes[(int)chord_notes.chord[i]], BLUE);
+            DrawBoundingBoxAsCube (keyBoxes[(int)current_chord_notes.chord[i]],
+                                   BLUE);
         }
     DrawGrid (10, 1);
     EndMode3D ();
@@ -73,16 +84,120 @@ UpdateIntSettingToChord (void)
         }
 }
 
-void
-GenChord (int key)
+int
+GenChord (int key, int prog_number)
 {
-    int octave = GetRandomValue (3, 6);
-    key = key + OCTAVE * octave;
-    if (progression_counter > 3)
-        progression_counter = 0;
-    chord_notes = convert_chordT_to_chordN (
+    if (progression_counter >= progressions.prog_length[0])
+        {
+            progression_counter = 0;
+            state = 0;
+            return 1;
+        }
+    former_chord_notes = current_chord_notes;
+    current_chord_notes = convert_chordT_to_chordN (
         progressions.data[0][progression_counter], key);
+    if (current_chord_notes.chord[0] == -1)
+        {
+            progression_counter = 0;
+            state = 0;
+            return 1;
+        }
+    for (int i = 0; i < MAX_CHORD_SIZE; i++)
+        {
+            if (current_chord_notes.chord[i] != -1)
+                {
+                    current_chord_notes.chord[i]
+                        = current_chord_notes.chord[i] + OCTAVE * 4;
+                }
+        }
     progression_counter++;
+    return 0;
+}
+
+void
+PlayChordProg (int key)
+{
+    key = key + OCTAVE * 3;
+    int random_prog = GetRandomValue (0, progressions.size - 1);
+    if (framesCounter == 80)
+        {
+            if (!GenChord (key, random_prog))
+                {
+                    TransitionChord ();
+                    PlayChord (current_chord_notes);
+                }
+            framesCounter = 0;
+        }
+    framesCounter++;
+}
+
+void
+TransitionChord (void)
+{
+    if (former_chord_notes.chord[0] == -1)
+        {
+            for (int i = 1; i < MAX_CHORD_SIZE; i++)
+                {
+                    if (current_chord_notes.chord[i] == -1)
+                        {
+                            break;
+                        }
+                    else if (current_chord_notes.chord[i]
+                             < current_chord_notes.chord[i - 1])
+                        {
+                            current_chord_notes.chord[i] += OCTAVE;
+                        }
+                }
+        }
+
+    for (int i = 0; i < MAX_CHORD_SIZE; i++)
+        {
+            if (current_chord_notes.chord[i] == -1)
+                {
+                    break;
+                }
+            int note_distance = OCTAVE;
+            for (int j = 0; j < MAX_CHORD_SIZE; j++)
+                {
+                    int new_distance = current_chord_notes.chord[i]
+                                       - former_chord_notes.chord[j];
+                    if (current_chord_notes.chord[i] % 12
+                        == former_chord_notes.chord[j] % 12)
+                        {
+                            note_distance = 0;
+                            current_chord_notes.chord[i]
+                                = former_chord_notes.chord[j];
+                            break;
+                        }
+                    if (abs (new_distance) > AUGUMENTED_FOURTH)
+                        {
+                            if (new_distance < -AUGUMENTED_FOURTH)
+                                new_distance = new_distance + OCTAVE;
+                            else
+                                new_distance = new_distance - OCTAVE;
+                        }
+                    if (abs (new_distance) < note_distance)
+                        {
+                            note_distance = new_distance;
+                            current_chord_notes.chord[i]
+                                = former_chord_notes.chord[j] + note_distance;
+                            break;
+                        }
+                }
+        }
+}
+
+void
+PlayChord (ChordNotes current_chord_notes)
+{
+    for (int i = 0; i < MAX_CHORD_SIZE; i++)
+        {
+            if (current_chord_notes.chord[i] > -1
+                && current_chord_notes.chord[i] < NO_OF_NOTES)
+                {
+                    PlaySound (sound[current_chord_notes.chord[i]]);
+                }
+        }
 }
 
 int
