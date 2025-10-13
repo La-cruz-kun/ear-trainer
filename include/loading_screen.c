@@ -20,12 +20,14 @@ static float alpha = 0;
 
 static int logoPositionX = 0;
 static int logoPositionY = 0;
-static Sound key_click = {0};
-static Sound enter_click = {0};
+static Sound key_click = { 0 };
+static Sound enter_click = { 0 };
 
-void InitLoadingScreen(void){
-  key_click = LoadSound("resources/audio/spacebarclick.mp3");
-  enter_click = LoadSound("resources/audio/enterkey.mp3");
+void
+InitLoadingScreen (void)
+{
+    key_click = LoadSound ("resources/audio/spacebarclick.mp3");
+    enter_click = LoadSound ("resources/audio/enterkey.mp3");
 }
 
 void
@@ -56,7 +58,7 @@ UpdateLoadingScreen (void)
                     break;
                 case STATE_FINISHED:
                     {
-                      framesCounter++;
+                        framesCounter++;
                         logoPositionX = GetRenderWidth () / 2 - 128;
                         logoPositionY = GetRenderHeight () / 2 - 128;
 
@@ -65,11 +67,11 @@ UpdateLoadingScreen (void)
                         bottomSideRecWidth = 16;
                         rightSideRecHeight = 16;
                         alpha = 1.0f;
-                        if (framesCounter == 80){
-                        state = 1;
-                        framesCounter = 0;
-
-                        }
+                        if (framesCounter == 80)
+                            {
+                                state = 1;
+                                framesCounter = 0;
+                            }
                     }
                     break;
                 default:
@@ -112,21 +114,23 @@ UpdateLoadingScreen (void)
                     if (framesCounter
                         / 12) // Every 12 frames, one more letter!
                         {
-                          if (lettersCount < 4) {
-                          if (IsSoundPlaying(key_click))
-                            StopSound(key_click);
-                          PlaySound(key_click);
-                          }
+                            if (lettersCount < 4)
+                                {
+                                    if (IsSoundPlaying (key_click))
+                                        StopSound (key_click);
+                                    PlaySound (key_click);
+                                }
                             lettersCount++;
                             framesCounter = 0;
                         }
                 }
             else // When all letters have appeared, just fade out everything
                 {
-                  StopSound(key_click);
-                  if (framesCounter == 21){
-                    PlaySound(enter_click);
-                  }
+                    StopSound (key_click);
+                    if (framesCounter == 21)
+                        {
+                            PlaySound (enter_click);
+                        }
                     if (framesCounter > 200)
                         {
                             alpha -= 0.02f;
@@ -156,13 +160,24 @@ DrawLoadingScreen (void)
                     {
                         DrawRectangle (150, 200, 0, 60, SKYBLUE);
                         if ((framesCounter / 15) % 2)
-DrawTextEx(font2, "LOADING DATA...", (Vector2) {240 - TextLength("LOADING DATA..."), 200}, 64, 1, DARKGRAY); // Draw text using font and additional parameters
+                            DrawTextEx (
+                                font2, "LOADING DATA...",
+                                (Vector2){
+                                    240 - TextLength ("LOADING DATA..."),
+                                    200 },
+                                64, 1, DARKGRAY); // Draw text using font and
+                                                  // additional parameters
                     }
                     break;
                 case STATE_FINISHED:
                     {
                         DrawRectangle (150, 200, 500, 60, DARKGRAY);
-DrawTextEx(font2, "DATA LOADED!", (Vector2) {250 - TextLength("DATA LOADED!"), 200}, 64, 1, RAYWHITE); // Draw text using font and additional parameters
+                        DrawTextEx (
+                            font2, "DATA LOADED!",
+                            (Vector2){ 250 - TextLength ("DATA LOADED!"),
+                                       200 },
+                            64, 1, RAYWHITE); // Draw text using font and
+                                              // additional parameters
                     }
                     break;
                 default:
@@ -198,16 +213,14 @@ DrawTextEx(font2, "DATA LOADED!", (Vector2) {250 - TextLength("DATA LOADED!"), 2
             DrawRectangle (logoPositionX, logoPositionY + 240,
                            bottomSideRecWidth, 16, RAYWHITE);
 
-            DrawRectanglePro (
-                (Rectangle){ logoPositionX + 300 + 120, logoPositionY, 16,
-                             leftSideRecHeight },
-                (Vector2){ 0, 0 }, 22.5,
-                RAYWHITE);
-            DrawRectanglePro (
-                (Rectangle){ logoPositionX + 300 + 120, logoPositionY, 16,
-                             leftSideRecHeight },
-                (Vector2){ 0, 0 }, -22.5,
-                RAYWHITE);
+            DrawRectanglePro ((Rectangle){ logoPositionX + 300 + 120,
+                                           logoPositionY, 16,
+                                           leftSideRecHeight },
+                              (Vector2){ 0, 0 }, 22.5, RAYWHITE);
+            DrawRectanglePro ((Rectangle){ logoPositionX + 300 + 120,
+                                           logoPositionY, 16,
+                                           leftSideRecHeight },
+                              (Vector2){ 0, 0 }, -22.5, RAYWHITE);
             DrawRectangle (logoPositionX + 300 + 60, logoPositionY + 120,
                            (unsigned int)(bottomSideRecWidth - 100), 16,
                            RAYWHITE);
@@ -228,22 +241,27 @@ DrawTextEx(font2, "DATA LOADED!", (Vector2) {250 - TextLength("DATA LOADED!"), 2
                 (Rectangle){ logoPositionX + 300 + 120, logoPositionY, 16,
                              leftSideRecHeight },
                 (Vector2){ 0, 0 }, 22.5,
-                Fade (RAYWHITE, alpha)); // Draw a color-filled rectangle with pro
-                                      // parameters
+                Fade (RAYWHITE, alpha)); // Draw a color-filled rectangle with
+                                         // pro parameters
             DrawRectanglePro (
                 (Rectangle){ logoPositionX + 300 + 120, logoPositionY, 16,
                              leftSideRecHeight },
                 (Vector2){ 0, 0 }, -22.5,
-                Fade (RAYWHITE, alpha)); // Draw a color-filled rectangle with pro
-                                      // parameters
+                Fade (RAYWHITE, alpha)); // Draw a color-filled rectangle with
+                                         // pro parameters
             DrawRectangle (logoPositionX + 300 + 60, logoPositionY + 120,
                            (unsigned int)(bottomSideRecWidth - 100), 16,
                            Fade (RAYWHITE, alpha));
 
-DrawTextEx(font3, TextSubtext("Cruz", 0, lettersCount), (Vector2) {GetRenderWidth () / 2.0 - 44, GetRenderHeight () / 2.0 + 48}, 64, 1, Fade (RAYWHITE, alpha));
+            DrawTextEx (font3, TextSubtext ("Cruz", 0, lettersCount),
+                        (Vector2){ GetRenderWidth () / 2.0 - 44,
+                                   GetRenderHeight () / 2.0 + 48 },
+                        64, 1, Fade (RAYWHITE, alpha));
 
             if (framesCounter > 20)
-DrawTextEx(font3, "made by", (Vector2) {logoPositionX, logoPositionY - 27}, 30, 1, Fade (DARKGRAY, alpha));
+                DrawTextEx (font3, "made by",
+                            (Vector2){ logoPositionX, logoPositionY - 27 }, 30,
+                            1, Fade (DARKGRAY, alpha));
         }
 }
 

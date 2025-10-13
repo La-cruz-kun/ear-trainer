@@ -64,7 +64,7 @@ bool screen_transition = false;
 bool quit = false;
 bool looped_once = false;
 
-int note_pool[POOL_SIZE] = { -1 };
+int note_pool[MAX_CHORD_SIZE] = { [0 ... MAX_CHORD_SIZE - 1] = -1 };
 int key = -1;
 int scale = -1;
 

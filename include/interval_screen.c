@@ -175,7 +175,7 @@ DrawPauseToInt (void)
     DrawPiano ();
 
     DrawModel (models[LIGHT_CUBE], lightPosition, 0.5f, YELLOW);
-    for (int i = 0; i < POOL_SIZE; i++)
+    for (int i = 0; i < MAX_CHORD_SIZE; i++)
         {
             if (note_pool[i] > -1)
                 {

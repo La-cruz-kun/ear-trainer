@@ -17,25 +17,18 @@ open_chord_file (const char *fileName)
 }
 
 int
-append_chord_prog (Chord_Progs *prog, ChordType *element, size_t element_len)
+append_chord_prog (Chord_Progs *prog, ChordTypes element)
 { // element must be an array of 4 values unused value should be -1
     if (prog->data == NULL)
         {
             prog->capacity = 4;
             prog->size = 0;
-            prog->data = (ChordType **)malloc (
+            prog->data = (ChordTypes *)malloc (
                 prog->capacity
-                * sizeof (ChordType *)); // initialize with 4 Chords[4] arrays
-            prog->prog_length
-                = (size_t *)malloc (prog->capacity * sizeof (size_t));
+                * sizeof (ChordTypes)); // initialize with 4 Chords[4] arrays
             if (prog->data == NULL)
                 {
                     printf ("could initialize linked list\n");
-                    return -1;
-                }
-            if (prog->prog_length == NULL)
-                {
-                    printf ("couldn't allocate prog_length\n");
                     return -1;
                 }
         }
@@ -43,23 +36,15 @@ append_chord_prog (Chord_Progs *prog, ChordType *element, size_t element_len)
         {
             prog->capacity = prog->capacity * 2;
             prog->data
-                = realloc (prog->data, prog->capacity * sizeof (ChordType *));
-            prog->prog_length = realloc (prog->prog_length,
-                                         prog->capacity * sizeof (size_t));
+                = realloc (prog->data, prog->capacity * sizeof (ChordTypes));
             if (prog->data == NULL)
                 {
                     printf ("counld not resize the linked list\n");
                     return -1;
                 }
-            if (prog->prog_length == NULL)
-                {
-                    printf ("coundn't resize prog_length\n");
-                    return -1;
-                }
         }
 
     prog->data[prog->size] = element;
-    prog->prog_length[prog->size] = element_len;
     prog->size++;
     return 0;
 }
@@ -117,10 +102,48 @@ convert_str_to_chordT (char *chord)
     return -1;
 }
 
+void
+convert_chordT_to_str (ChordType chordT, char *str)
+{
+    switch (chordT)
+        {
+        case I:
+            str[0] = 'I';
+            break;
+        case ii:
+            str[0] = 'i';
+            str[1] = 'i';
+            break;
+        case iii:
+            str[0] = 'i';
+            str[1] = 'i';
+            str[2] = 'i';
+            break;
+        case IV:
+            str[0] = 'I';
+            str[1] = 'V';
+            break;
+        case V:
+            str[0] = 'V';
+            break;
+        case vi:
+            str[0] = 'v';
+            str[1] = 'i';
+            break;
+        case vii:
+            str[0] = 'v';
+            str[1] = 'i';
+            str[2] = 'i';
+            break;
+        default:
+            break;
+        }
+}
+
 ChordNotes
 convert_chordT_to_chordN (ChordType chordT, Notes base_note)
 {
-    ChordNotes chordN = { .chord = { -1, -1, -1, -1 } };
+    ChordNotes chordN = { .chord = { [0 ... MAX_CHORD_SIZE - 1] = -1 } };
     switch (chordT)
         {
         case I:
@@ -215,8 +238,7 @@ parse_chord_file (char *fileName)
                                 {
                                     line_prog.data[i] = -1;
                                 }
-                            append_chord_prog (&progressions, line_prog.data,
-                                               c_counter);
+                            append_chord_prog (&progressions, line_prog);
                             break;
                         }
                     if (buffer[i] == '-' || buffer[i] == '\n')

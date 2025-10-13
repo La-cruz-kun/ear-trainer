@@ -8,11 +8,10 @@
 #define NO_OF_IMAGES 50
 #define MAX_NUM_OF_BUTTON 15
 #define NO_OF_MUSIC 5
-#define POOL_SIZE 6
+#define MAX_CHORD_SIZE 6
 #define MENU_BUTTON_WIDTH 0.16 * GetRenderWidth ()
 #define MENU_BUTTON_HEIGHT 0.08 * GetRenderWidth ()
 #define NOTE_N 6 * SCALE_LENGTH
-#define MAX_CHORD_SIZE 4
 
 enum Screen
 {
@@ -283,13 +282,13 @@ int LoadPlaneModel (void);
 int LoadUi (void);
 int LoadResources (void);
 int LoadSoundInstrument (void);
-void CheckKeyPress (void);
 
 int GenNote (int key, Scale scale);
 int GenChord (int key, int prog_number);
 void PlayChordProg (int key);
 void PlayChord (ChordNotes chord_notes);
 void TransitionChord (void);
+int ChordLength (int *chord);
 
 void AlignScreenButtons (float height, float width, float x, float y,
                          float padding, int no_of_buttons,
@@ -371,7 +370,7 @@ extern Vector3 lightSpecular;
 extern int shaderLoc[NO_OF_SHADER_LOC];
 extern int current_music_index;
 extern int no_of_buttons[NO_OF_SCREEN];
-extern int note_pool[POOL_SIZE];
+extern int note_pool[MAX_CHORD_SIZE];
 extern int key;
 extern int scale;
 

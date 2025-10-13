@@ -2,6 +2,7 @@
 
 static unsigned int currentOctave = 0;
 static int finish = 0;
+static void CheckKeyPress (void);
 void
 UpdateFreeScreen (void)
 {
@@ -37,7 +38,7 @@ DrawFreeScreen (void)
 
     // Draw light cube
     DrawModel (models[LIGHT_CUBE], lightPosition, 0.5f, YELLOW);
-    for (int i = 0; i < POOL_SIZE; i++)
+    for (int i = 0; i < MAX_CHORD_SIZE; i++)
         {
             if (note_pool[i] > -1)
                 {
@@ -51,7 +52,7 @@ DrawFreeScreen (void)
     DrawFPS (10, 10);
 }
 
-void
+static void
 CheckKeyPress (void)
 {
     int key;
@@ -61,7 +62,7 @@ CheckKeyPress (void)
                 {
                     int note
                         = hmget (Key_to_note, key) + currentOctave * OCTAVE;
-                    for (int i = 0; i < POOL_SIZE; i++)
+                    for (int i = 0; i < MAX_CHORD_SIZE; i++)
                         {
                             if (note_pool[i] == -1)
                                 {
@@ -94,7 +95,7 @@ CheckKeyPress (void)
                 {
                     int note
                         = hmget (Key_to_note, key) + currentOctave * OCTAVE;
-                    for (int i = 0; i < POOL_SIZE; i++)
+                    for (int i = 0; i < MAX_CHORD_SIZE; i++)
                         {
                             if (note_pool[i] == note)
                                 {
@@ -133,7 +134,7 @@ DrawPauseToFree (void)
     DrawPiano ();
 
     DrawModel (models[LIGHT_CUBE], lightPosition, 0.5f, YELLOW);
-    for (int i = 0; i < POOL_SIZE; i++)
+    for (int i = 0; i < MAX_CHORD_SIZE; i++)
         {
             if (note_pool[i] > -1)
                 {
