@@ -67,7 +67,7 @@ CheckKeyPress (void)
                             if (note_pool[i] == -1)
                                 {
                                     note_pool[i] = note;
-                                    PlaySound (sound[note]);
+                                    PlaySound (piano_sound[note]);
                                     break;
                                 }
                         }
@@ -99,7 +99,7 @@ CheckKeyPress (void)
                         {
                             if (note_pool[i] == note)
                                 {
-                                    StopSound (sound[note]);
+                                    StopSound (piano_sound[note]);
                                     note_pool[i] = -1;
                                 }
                         }
@@ -123,60 +123,6 @@ UpdateHomeToFree (void)
         {
             screen_transition = false;
             printf ("done\n");
-        }
-}
-void
-DrawPauseToFree (void)
-{
-    BeginMode3D (camera);
-
-    DrawPlaneModel ();
-    DrawPiano ();
-
-    DrawModel (models[LIGHT_CUBE], lightPosition, 0.5f, YELLOW);
-    for (int i = 0; i < MAX_CHORD_SIZE; i++)
-        {
-            if (note_pool[i] > -1)
-                {
-                    DrawBoundingBoxAsCube (keyBoxes[note_pool[i]], BLUE);
-                }
-        }
-
-    EndMode3D ();
-    AlignScreenButtons (MENU_BUTTON_HEIGHT, MENU_BUTTON_WIDTH,
-                        GetRenderWidth () * 3 / 4.0, 0,
-                        GetRenderHeight () / 20.0, no_of_buttons[FREE_SCREEN],
-                        buttons[FREE_SCREEN]);
-    for (int i = 0; i < no_of_buttons[INTERVAL_SCREEN]; i++)
-        DrawMenuButton (buttons[INTERVAL_SCREEN][i]);
-    BeginMode2D (camera2d);
-
-    AlignScreenButtons (MENU_BUTTON_HEIGHT, MENU_BUTTON_WIDTH,
-                        GetRenderWidth () * 3 / 4.0, 0,
-                        GetRenderHeight () / 20.0, no_of_buttons[PAUSE_SCREEN],
-                        buttons[PAUSE_SCREEN]);
-
-    DrawBackgroundImage (images[1]);
-    for (int i = 0; i < no_of_buttons[PAUSE_SCREEN]; i++)
-        DrawMenuButton (buttons[PAUSE_SCREEN][i]);
-    DrawTextEx (font1, TextFormat ("Currently Playing %s - %s", Title, Artist),
-                (Vector2){ GetRenderWidth () * 1 / 100.0,
-                           GetRenderHeight () * 1 / 100.0 },
-                24 * GetRenderHeight () / 600.0, 1, DARKBROWN);
-
-    DrawFPS (10, 10);
-    EndMode2D ();
-}
-
-void
-UpdatePauseToFree (void)
-{
-    float target = GetRenderHeight ();
-    camera2d.offset.y = Lerp (camera2d.offset.y, target, 0.1);
-    target -= 5;
-    if (camera2d.offset.y >= target)
-        {
-            screen_transition = false;
         }
 }
 

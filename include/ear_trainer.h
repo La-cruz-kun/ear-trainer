@@ -203,6 +203,7 @@ typedef enum
     C8,
     NO_OF_NOTES
 } Notes;
+
 typedef enum
 {
     C,
@@ -216,7 +217,8 @@ typedef enum
     GS,
     A,
     AS,
-    B
+    B,
+    NO_OF_ACTUAL_NOTE
 } Actual_Note;
 
 typedef enum
@@ -269,7 +271,6 @@ bool IsMenuButtonPressed (MenuButton *button);
 // util.c
 MenuButton CreateMenuButton (Texture image, const char *text, Color text_color,
                              Rectangle bound);
-void calcMenuButtonPosition (MenuButton *button, ...);
 
 void UpdateHomeScreen (void);
 
@@ -284,9 +285,10 @@ int LoadResources (void);
 int LoadSoundInstrument (void);
 
 int GenNote (int key, Scale scale);
-int GenChord (int key, int prog_number);
-void PlayChordProg (int key);
-void PlayChord (ChordNotes chord_notes);
+int GenChord (int local_key, int prog_number);
+void PlayChordProg ();
+void PlayChord (ChordNotes chord);
+void StopChord (ChordNotes chord);
 void TransitionChord (void);
 int ChordLength (int *chord);
 
@@ -310,14 +312,11 @@ void UpdateChordScreen (void);
 void UpdateTransition (void);
 
 void UpdateHomeToIntSetting (void);
-void UpdateIntSettingToInt (void);
+void UpdateIntSettingTo3D (enum Screen screen);
 void UpdateHomeToFree (void);
-void UpdateIntToPause (void);
-void UpdateFreeToPause (void);
-void UpdatePauseToInt (void);
-void UpdatePauseToFree (void);
+void Update3DToPause (void);
+void UpdatePauseTo3D (void);
 void UpdatePauseToHome (void);
-void UpdateIntSettingToChord (void);
 
 void DrawLoadingScreen (void);
 void DrawHomeScreen (void);
@@ -330,11 +329,11 @@ void DrawChordScreen (void);
 void DrawTransition (void);
 
 void DrawHomeToIntSetting (void);
-void DrawIntToPause (void);
-void DrawFreeToPause (void);
-void DrawPauseToInt (void);
-void DrawPauseToFree (void);
+void DrawPauseTo3D (enum Screen screen);
+void Draw3DToPause (enum Screen screen);
 void DrawPauseToHome (void);
+
+void SpringAnimation (void);
 
 bool FinishLoadingScreen (void);
 int FinishHomeScreen (void);
@@ -343,9 +342,12 @@ int FinishPauseScreen (void);
 int FinishIntScreen (void);
 int FinishFreeScreen (void);
 int FinishSettingScreen (void);
+int FinishChordScreen (void);
 
 void ChangeToScreen (enum Screen screen);
 void TransitionToScreen (enum Screen screen);
+
+void UnloadSoundInstrument (void);
 
 extern Camera2D camera2d;
 extern Camera camera;
@@ -374,7 +376,8 @@ extern int note_pool[MAX_CHORD_SIZE];
 extern int key;
 extern int scale;
 
-extern Sound sound[NO_OF_NOTES];
+extern Sound piano_sound[NO_OF_NOTES];
+extern Sound bass_sound[NO_OF_ACTUAL_NOTE];
 extern KeyboardHashMap *Key_to_note;
 extern Model models[NO_OF_MODELS];
 extern BoundingBox keyBoxes[NO_OF_NOTES];

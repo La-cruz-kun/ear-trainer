@@ -16,6 +16,7 @@ UpdateIntervalScreen (void)
     finish = 0;
     if (!IsMusicStreamPlaying (drone[key]))
         {
+            SetMusicVolume (drone[key], 0.5);
             PlayMusicStream (drone[key]);
         }
     UpdateMusicStream (drone[key]);
@@ -24,11 +25,12 @@ UpdateIntervalScreen (void)
     if (current_note == -1)
         {
             current_note = GenNote (key, scale);
-            PlaySound (sound[current_note]);
+            PlaySound (piano_sound[current_note]);
             framesCounter = 0;
         }
 
-    bool playing = !IsSoundPlaying (sound[current_note]) && !player_respond;
+    bool playing
+        = !IsSoundPlaying (piano_sound[current_note]) && !player_respond;
 
     if (playing)
         {
@@ -41,7 +43,7 @@ UpdateIntervalScreen (void)
                         = hmget (Key_to_note, key) + currentOctave * OCTAVE;
                     if (IsKeyPressed (key))
                         {
-                            PlaySound (sound[note]);
+                            PlaySound (piano_sound[note]);
                             note_pool[0] = note;
                             player_respond = true;
                             framesCounter = 0;
@@ -61,19 +63,20 @@ UpdateIntervalScreen (void)
             framesCounter++;
             if (player_respond && framesCounter > 120)
                 {
-                    StopSound (sound[note_pool[0]]);
+                    StopSound (piano_sound[note_pool[0]]);
                     if (framesCounter > 150)
                         {
                             strcpy (interval_feedback, "");
                             framesCounter = 0;
                             player_respond = false;
                             current_note = GenNote (key, scale);
-                            PlaySound (sound[current_note]);
+                            PlaySound (piano_sound[current_note]);
                         }
                 }
-            if (IsSoundPlaying (sound[current_note]) && framesCounter > 60)
+            if (IsSoundPlaying (piano_sound[current_note])
+                && framesCounter > 60)
                 {
-                    StopSound (sound[current_note]);
+                    StopSound (piano_sound[current_note]);
                     framesCounter = 0;
                 }
         }
@@ -131,12 +134,11 @@ DrawIntervalScreen (void)
 }
 
 void
-UpdateIntSettingToInt (void)
+UpdateIntSettingTo3D (enum Screen screen)
 {
     AlignScreenButtons (
         MENU_BUTTON_HEIGHT, MENU_BUTTON_WIDTH, GetRenderWidth () * 3 / 4.0, 0,
-        GetRenderHeight () / 20.0, no_of_buttons[INTERVAL_SCREEN],
-        buttons[INTERVAL_SCREEN]);
+        GetRenderHeight () / 20.0, no_of_buttons[screen], buttons[screen]);
 
     Vector3 target = { 0, 2, 2 };
     camera.position.x = Lerp (camera.position.x, target.x, 0.04);
@@ -155,7 +157,7 @@ UpdateIntSettingToInt (void)
 }
 
 void
-UpdatePauseToInt (void)
+UpdatePauseTo3D (void)
 {
     float target = GetRenderHeight ();
     camera2d.offset.y = Lerp (camera2d.offset.y, target, 0.1);
@@ -167,7 +169,7 @@ UpdatePauseToInt (void)
 }
 
 void
-DrawPauseToInt (void)
+DrawPauseTo3D (enum Screen screen)
 {
     BeginMode3D (camera);
 
@@ -186,10 +188,9 @@ DrawPauseToInt (void)
     EndMode3D ();
     AlignScreenButtons (
         MENU_BUTTON_HEIGHT, MENU_BUTTON_WIDTH, GetRenderWidth () * 3 / 4.0, 0,
-        GetRenderHeight () / 20.0, no_of_buttons[INTERVAL_SCREEN],
-        buttons[INTERVAL_SCREEN]);
-    for (int i = 0; i < no_of_buttons[INTERVAL_SCREEN]; i++)
-        DrawMenuButton (buttons[INTERVAL_SCREEN][i]);
+        GetRenderHeight () / 20.0, no_of_buttons[screen], buttons[screen]);
+    for (int i = 0; i < no_of_buttons[screen]; i++)
+        DrawMenuButton (buttons[screen][i]);
     BeginMode2D (camera2d);
 
     AlignScreenButtons (MENU_BUTTON_HEIGHT, MENU_BUTTON_WIDTH,

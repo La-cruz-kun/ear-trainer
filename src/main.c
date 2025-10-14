@@ -36,7 +36,8 @@
 
 Music drone[OCTAVE] = { 0 };
 BoundingBox keyBoxes[NO_OF_NOTES] = { 0 };
-Sound sound[NO_OF_NOTES] = { 0 };
+Sound piano_sound[NO_OF_NOTES] = { 0 };
+Sound bass_sound[NO_OF_ACTUAL_NOTE] = { 0 };
 bool key_pressed;
 KeyboardHashMap *Key_to_note = NULL;
 Font font1 = { 0 };
@@ -104,6 +105,7 @@ main (void)
         {
             update ();
         }
+    UnloadSoundInstrument ();
     CloseWindow ();
     return 0;
 }
@@ -173,11 +175,6 @@ init (void)
     parse_chord_file ("resources/chordprogression.txt");
 
     finish ();
-
-    /* PlayMusicStream (music[current_music_index]); */
-    /* read_id3v2 (music_file[current_music_index]); */
-
-    // When data has finished loading, we set global variable
     end;
     return 1;
 }
@@ -241,6 +238,8 @@ update (void)
                 case CHORD_SCREEN:
                     {
                         UpdateChordScreen ();
+                        if (FinishChordScreen () == 1)
+                            TransitionToScreen (PAUSE_SCREEN);
                         break;
                     }
                 case PAUSE_SCREEN:
@@ -252,6 +251,8 @@ update (void)
                             TransitionToScreen (FREE_SCREEN);
                         else if (FinishPauseScreen () == 3)
                             TransitionToScreen (HOME_SCREEN);
+                        else if (FinishPauseScreen () == 4)
+                            TransitionToScreen (CHORD_SCREEN);
                         break;
                     }
                 case SETTING_SCREEN:
@@ -743,158 +744,176 @@ LoadSoundInstrument (void)
 {
     begin;
     // Octave 1
-    sound[C1] = LoadSound ("resources/instrument/piano/1-c.mp3");
-    sound[CS1] = LoadSound ("resources/instrument/piano/1-cs.mp3");
+    piano_sound[C1] = LoadSound ("resources/instrument/piano/1-c.mp3");
+    piano_sound[CS1] = LoadSound ("resources/instrument/piano/1-cs.mp3");
     yield ();
-    sound[D1] = LoadSound ("resources/instrument/piano/1-d.mp3");
+    piano_sound[D1] = LoadSound ("resources/instrument/piano/1-d.mp3");
     yield ();
-    sound[DS1] = LoadSound ("resources/instrument/piano/1-ds.mp3");
-    sound[E1] = LoadSound ("resources/instrument/piano/1-e.mp3");
+    piano_sound[DS1] = LoadSound ("resources/instrument/piano/1-ds.mp3");
+    piano_sound[E1] = LoadSound ("resources/instrument/piano/1-e.mp3");
     yield ();
-    sound[F1] = LoadSound ("resources/instrument/piano/1-f.mp3");
-    sound[FS1] = LoadSound ("resources/instrument/piano/1-fs.mp3");
+    piano_sound[F1] = LoadSound ("resources/instrument/piano/1-f.mp3");
+    piano_sound[FS1] = LoadSound ("resources/instrument/piano/1-fs.mp3");
     yield ();
-    sound[G1] = LoadSound ("resources/instrument/piano/1-g.mp3");
-    sound[GS1] = LoadSound ("resources/instrument/piano/1-gs.mp3");
+    piano_sound[G1] = LoadSound ("resources/instrument/piano/1-g.mp3");
+    piano_sound[GS1] = LoadSound ("resources/instrument/piano/1-gs.mp3");
     yield ();
-    sound[A1] = LoadSound ("resources/instrument/piano/1-a.mp3");
-    sound[AS1] = LoadSound ("resources/instrument/piano/1-as.mp3");
+    piano_sound[A1] = LoadSound ("resources/instrument/piano/1-a.mp3");
+    piano_sound[AS1] = LoadSound ("resources/instrument/piano/1-as.mp3");
     yield ();
-    sound[B1] = LoadSound ("resources/instrument/piano/1-b.mp3");
+    piano_sound[B1] = LoadSound ("resources/instrument/piano/1-b.mp3");
 
     yield ();
     // Octave 2
-    sound[C2] = LoadSound ("resources/instrument/piano/2-c.mp3");
-    sound[CS2] = LoadSound ("resources/instrument/piano/2-cs.mp3");
+    piano_sound[C2] = LoadSound ("resources/instrument/piano/2-c.mp3");
+    piano_sound[CS2] = LoadSound ("resources/instrument/piano/2-cs.mp3");
     yield ();
-    sound[D2] = LoadSound ("resources/instrument/piano/2-d.mp3");
+    piano_sound[D2] = LoadSound ("resources/instrument/piano/2-d.mp3");
     yield ();
-    sound[DS2] = LoadSound ("resources/instrument/piano/2-ds.mp3");
-    sound[E2] = LoadSound ("resources/instrument/piano/2-e.mp3");
+    piano_sound[DS2] = LoadSound ("resources/instrument/piano/2-ds.mp3");
+    piano_sound[E2] = LoadSound ("resources/instrument/piano/2-e.mp3");
     yield ();
-    sound[F2] = LoadSound ("resources/instrument/piano/2-f.mp3");
-    sound[FS2] = LoadSound ("resources/instrument/piano/2-fs.mp3");
+    piano_sound[F2] = LoadSound ("resources/instrument/piano/2-f.mp3");
+    piano_sound[FS2] = LoadSound ("resources/instrument/piano/2-fs.mp3");
     yield ();
-    sound[G2] = LoadSound ("resources/instrument/piano/2-g.mp3");
+    piano_sound[G2] = LoadSound ("resources/instrument/piano/2-g.mp3");
     yield ();
-    sound[GS2] = LoadSound ("resources/instrument/piano/2-gs.mp3");
+    piano_sound[GS2] = LoadSound ("resources/instrument/piano/2-gs.mp3");
     yield ();
-    sound[A2] = LoadSound ("resources/instrument/piano/2-a.mp3");
+    piano_sound[A2] = LoadSound ("resources/instrument/piano/2-a.mp3");
     yield ();
-    sound[AS2] = LoadSound ("resources/instrument/piano/2-as.mp3");
-    sound[B2] = LoadSound ("resources/instrument/piano/2-b.mp3");
+    piano_sound[AS2] = LoadSound ("resources/instrument/piano/2-as.mp3");
+    piano_sound[B2] = LoadSound ("resources/instrument/piano/2-b.mp3");
     yield ();
 
     // Octave 3
-    sound[C3] = LoadSound ("resources/instrument/piano/3-c.mp3");
+    piano_sound[C3] = LoadSound ("resources/instrument/piano/3-c.mp3");
     yield ();
-    sound[CS3] = LoadSound ("resources/instrument/piano/3-cs.mp3");
+    piano_sound[CS3] = LoadSound ("resources/instrument/piano/3-cs.mp3");
     yield ();
-    sound[D3] = LoadSound ("resources/instrument/piano/3-d.mp3");
-    sound[DS3] = LoadSound ("resources/instrument/piano/3-ds.mp3");
+    piano_sound[D3] = LoadSound ("resources/instrument/piano/3-d.mp3");
+    piano_sound[DS3] = LoadSound ("resources/instrument/piano/3-ds.mp3");
     yield ();
-    sound[E3] = LoadSound ("resources/instrument/piano/3-e.mp3");
-    sound[F3] = LoadSound ("resources/instrument/piano/3-f.mp3");
+    piano_sound[E3] = LoadSound ("resources/instrument/piano/3-e.mp3");
+    piano_sound[F3] = LoadSound ("resources/instrument/piano/3-f.mp3");
     yield ();
-    sound[FS3] = LoadSound ("resources/instrument/piano/3-fs.mp3");
-    sound[G3] = LoadSound ("resources/instrument/piano/3-g.mp3");
+    piano_sound[FS3] = LoadSound ("resources/instrument/piano/3-fs.mp3");
+    piano_sound[G3] = LoadSound ("resources/instrument/piano/3-g.mp3");
     yield ();
-    sound[GS3] = LoadSound ("resources/instrument/piano/3-gs.mp3");
-    sound[A3] = LoadSound ("resources/instrument/piano/3-a.mp3");
+    piano_sound[GS3] = LoadSound ("resources/instrument/piano/3-gs.mp3");
+    piano_sound[A3] = LoadSound ("resources/instrument/piano/3-a.mp3");
     yield ();
-    sound[AS3] = LoadSound ("resources/instrument/piano/3-as.mp3");
-    sound[B3] = LoadSound ("resources/instrument/piano/3-b.mp3");
+    piano_sound[AS3] = LoadSound ("resources/instrument/piano/3-as.mp3");
+    piano_sound[B3] = LoadSound ("resources/instrument/piano/3-b.mp3");
     yield ();
 
     // Octave 4
-    sound[C4] = LoadSound ("resources/instrument/piano/4-c.mp3");
+    piano_sound[C4] = LoadSound ("resources/instrument/piano/4-c.mp3");
     yield ();
-    sound[CS4] = LoadSound ("resources/instrument/piano/4-cs.mp3");
+    piano_sound[CS4] = LoadSound ("resources/instrument/piano/4-cs.mp3");
     yield ();
-    sound[D4] = LoadSound ("resources/instrument/piano/4-d.mp3");
-    sound[DS4] = LoadSound ("resources/instrument/piano/4-ds.mp3");
+    piano_sound[D4] = LoadSound ("resources/instrument/piano/4-d.mp3");
+    piano_sound[DS4] = LoadSound ("resources/instrument/piano/4-ds.mp3");
     yield ();
-    sound[E4] = LoadSound ("resources/instrument/piano/4-e.mp3");
-    sound[F4] = LoadSound ("resources/instrument/piano/4-f.mp3");
+    piano_sound[E4] = LoadSound ("resources/instrument/piano/4-e.mp3");
+    piano_sound[F4] = LoadSound ("resources/instrument/piano/4-f.mp3");
     yield ();
-    sound[FS4] = LoadSound ("resources/instrument/piano/4-fs.mp3");
+    piano_sound[FS4] = LoadSound ("resources/instrument/piano/4-fs.mp3");
     yield ();
-    sound[G4] = LoadSound ("resources/instrument/piano/4-g.mp3");
-    sound[GS4] = LoadSound ("resources/instrument/piano/4-gs.mp3");
+    piano_sound[G4] = LoadSound ("resources/instrument/piano/4-g.mp3");
+    piano_sound[GS4] = LoadSound ("resources/instrument/piano/4-gs.mp3");
     yield ();
-    sound[A4] = LoadSound ("resources/instrument/piano/4-a.mp3");
-    sound[AS4] = LoadSound ("resources/instrument/piano/4-as.mp3");
+    piano_sound[A4] = LoadSound ("resources/instrument/piano/4-a.mp3");
+    piano_sound[AS4] = LoadSound ("resources/instrument/piano/4-as.mp3");
     yield ();
-    sound[B4] = LoadSound ("resources/instrument/piano/4-b.mp3");
+    piano_sound[B4] = LoadSound ("resources/instrument/piano/4-b.mp3");
 
     // Octave 5
-    sound[C5] = LoadSound ("resources/instrument/piano/5-c.mp3");
+    piano_sound[C5] = LoadSound ("resources/instrument/piano/5-c.mp3");
     yield ();
-    sound[CS5] = LoadSound ("resources/instrument/piano/5-cs.mp3");
-    sound[D5] = LoadSound ("resources/instrument/piano/5-d.mp3");
+    piano_sound[CS5] = LoadSound ("resources/instrument/piano/5-cs.mp3");
+    piano_sound[D5] = LoadSound ("resources/instrument/piano/5-d.mp3");
     yield ();
-    sound[DS5] = LoadSound ("resources/instrument/piano/5-ds.mp3");
-    sound[E5] = LoadSound ("resources/instrument/piano/5-e.mp3");
+    piano_sound[DS5] = LoadSound ("resources/instrument/piano/5-ds.mp3");
+    piano_sound[E5] = LoadSound ("resources/instrument/piano/5-e.mp3");
     yield ();
-    sound[F5] = LoadSound ("resources/instrument/piano/5-f.mp3");
+    piano_sound[F5] = LoadSound ("resources/instrument/piano/5-f.mp3");
     yield ();
-    sound[FS5] = LoadSound ("resources/instrument/piano/5-fs.mp3");
+    piano_sound[FS5] = LoadSound ("resources/instrument/piano/5-fs.mp3");
     yield ();
-    sound[G5] = LoadSound ("resources/instrument/piano/5-g.mp3");
+    piano_sound[G5] = LoadSound ("resources/instrument/piano/5-g.mp3");
     yield ();
-    sound[GS5] = LoadSound ("resources/instrument/piano/5-gs.mp3");
+    piano_sound[GS5] = LoadSound ("resources/instrument/piano/5-gs.mp3");
     yield ();
-    sound[A5] = LoadSound ("resources/instrument/piano/5-a.mp3");
-    sound[AS5] = LoadSound ("resources/instrument/piano/5-as.mp3");
+    piano_sound[A5] = LoadSound ("resources/instrument/piano/5-a.mp3");
+    piano_sound[AS5] = LoadSound ("resources/instrument/piano/5-as.mp3");
     yield ();
-    sound[B5] = LoadSound ("resources/instrument/piano/5-b.mp3");
+    piano_sound[B5] = LoadSound ("resources/instrument/piano/5-b.mp3");
 
     yield ();
     // Octave 6
-    sound[C6] = LoadSound ("resources/instrument/piano/6-c.mp3");
+    piano_sound[C6] = LoadSound ("resources/instrument/piano/6-c.mp3");
     yield ();
-    sound[CS6] = LoadSound ("resources/instrument/piano/6-cs.mp3");
-    sound[D6] = LoadSound ("resources/instrument/piano/6-d.mp3");
+    piano_sound[CS6] = LoadSound ("resources/instrument/piano/6-cs.mp3");
+    piano_sound[D6] = LoadSound ("resources/instrument/piano/6-d.mp3");
     yield ();
-    sound[DS6] = LoadSound ("resources/instrument/piano/6-ds.mp3");
-    sound[E6] = LoadSound ("resources/instrument/piano/6-e.mp3");
+    piano_sound[DS6] = LoadSound ("resources/instrument/piano/6-ds.mp3");
+    piano_sound[E6] = LoadSound ("resources/instrument/piano/6-e.mp3");
     yield ();
-    sound[F6] = LoadSound ("resources/instrument/piano/6-f.mp3");
-    sound[FS6] = LoadSound ("resources/instrument/piano/6-fs.mp3");
+    piano_sound[F6] = LoadSound ("resources/instrument/piano/6-f.mp3");
+    piano_sound[FS6] = LoadSound ("resources/instrument/piano/6-fs.mp3");
     yield ();
-    sound[G6] = LoadSound ("resources/instrument/piano/6-g.mp3");
-    sound[GS6] = LoadSound ("resources/instrument/piano/6-gs.mp3");
+    piano_sound[G6] = LoadSound ("resources/instrument/piano/6-g.mp3");
+    piano_sound[GS6] = LoadSound ("resources/instrument/piano/6-gs.mp3");
     yield ();
-    sound[A6] = LoadSound ("resources/instrument/piano/6-a.mp3");
+    piano_sound[A6] = LoadSound ("resources/instrument/piano/6-a.mp3");
     yield ();
-    sound[AS6] = LoadSound ("resources/instrument/piano/6-as.mp3");
+    piano_sound[AS6] = LoadSound ("resources/instrument/piano/6-as.mp3");
     yield ();
-    sound[B6] = LoadSound ("resources/instrument/piano/6-b.mp3");
+    piano_sound[B6] = LoadSound ("resources/instrument/piano/6-b.mp3");
 
     yield ();
     // Octave 7
-    sound[C7] = LoadSound ("resources/instrument/piano/7-c.mp3");
+    piano_sound[C7] = LoadSound ("resources/instrument/piano/7-c.mp3");
     yield ();
-    sound[CS7] = LoadSound ("resources/instrument/piano/7-cs.mp3");
-    sound[D7] = LoadSound ("resources/instrument/piano/7-d.mp3");
+    piano_sound[CS7] = LoadSound ("resources/instrument/piano/7-cs.mp3");
+    piano_sound[D7] = LoadSound ("resources/instrument/piano/7-d.mp3");
     yield ();
-    sound[DS7] = LoadSound ("resources/instrument/piano/7-ds.mp3");
-    sound[E7] = LoadSound ("resources/instrument/piano/7-e.mp3");
+    piano_sound[DS7] = LoadSound ("resources/instrument/piano/7-ds.mp3");
+    piano_sound[E7] = LoadSound ("resources/instrument/piano/7-e.mp3");
     yield ();
-    sound[F7] = LoadSound ("resources/instrument/piano/7-f.mp3");
-    sound[FS7] = LoadSound ("resources/instrument/piano/7-fs.mp3");
+    piano_sound[F7] = LoadSound ("resources/instrument/piano/7-f.mp3");
+    piano_sound[FS7] = LoadSound ("resources/instrument/piano/7-fs.mp3");
     yield ();
-    sound[G7] = LoadSound ("resources/instrument/piano/7-g.mp3");
-    sound[GS7] = LoadSound ("resources/instrument/piano/7-gs.mp3");
+    piano_sound[G7] = LoadSound ("resources/instrument/piano/7-g.mp3");
+    piano_sound[GS7] = LoadSound ("resources/instrument/piano/7-gs.mp3");
     yield ();
-    sound[A7] = LoadSound ("resources/instrument/piano/7-a.mp3");
-    sound[AS7] = LoadSound ("resources/instrument/piano/7-as.mp3");
+    piano_sound[A7] = LoadSound ("resources/instrument/piano/7-a.mp3");
+    piano_sound[AS7] = LoadSound ("resources/instrument/piano/7-as.mp3");
     yield ();
-    sound[B7] = LoadSound ("resources/instrument/piano/7-b.mp3");
+    piano_sound[B7] = LoadSound ("resources/instrument/piano/7-b.mp3");
 
-    yield ();
     // Top C (octave 8)
-    sound[C8] = LoadSound ("resources/instrument/piano/8-c.mp3");
+    piano_sound[C8] = LoadSound ("resources/instrument/piano/8-c.mp3");
+    yield ();
+
+    bass_sound[C] = LoadSound ("resources/instrument/bass/2-c.mp3");
+    bass_sound[CS] = LoadSound ("resources/instrument/bass/2-cs.mp3");
+    yield ();
+    bass_sound[D] = LoadSound ("resources/instrument/bass/2-d.mp3");
+    bass_sound[DS] = LoadSound ("resources/instrument/bass/2-ds.mp3");
+    yield ();
+    bass_sound[E] = LoadSound ("resources/instrument/bass/2-e.mp3");
+    bass_sound[F] = LoadSound ("resources/instrument/bass/2-f.mp3");
+    yield ();
+    bass_sound[FS] = LoadSound ("resources/instrument/bass/2-fs.mp3");
+    bass_sound[G] = LoadSound ("resources/instrument/bass/1-g.mp3");
+    yield ();
+    bass_sound[GS] = LoadSound ("resources/instrument/bass/1-gs.mp3");
+    bass_sound[A] = LoadSound ("resources/instrument/bass/2-a.mp3");
+    yield ();
+    bass_sound[AS] = LoadSound ("resources/instrument/bass/2-as.mp3");
+    bass_sound[B] = LoadSound ("resources/instrument/bass/2-b.mp3");
     finish ();
     end;
     return 1;
@@ -1034,6 +1053,21 @@ LoadUi (void)
     for (no_of_buttons[INTERVAL_SCREEN] = 0;
          buttons[INTERVAL_SCREEN][no_of_buttons[INTERVAL_SCREEN]].is == true;
          no_of_buttons[INTERVAL_SCREEN]++)
+        ;
+
+    yield ();
+    /***************************************************/
+
+    /***************** CHORD SCREEN UI ******************/
+    buttons[CHORD_SCREEN][0]
+        = CreateMenuButton (images[40], "", GREEN,
+                            (Rectangle){ .width = 600 / 2.0,
+                                         .height = 220 / 2.0,
+                                         .x = GetRenderWidth () * 3 / 4.0,
+                                         .y = 200 });
+    for (no_of_buttons[CHORD_SCREEN] = 0;
+         buttons[CHORD_SCREEN][no_of_buttons[CHORD_SCREEN]].is == true;
+         no_of_buttons[CHORD_SCREEN]++)
         ;
 
     yield ();
@@ -1216,11 +1250,11 @@ UpdateTransition (void)
                 {
                 case INTERVAL_SCREEN:
                     camera2d.offset = (Vector2){ 0, 0 };
-                    UpdateIntSettingToInt ();
+                    UpdateIntSettingTo3D (INTERVAL_SCREEN);
                     break;
                 case CHORD_SCREEN:
                     camera2d.offset = (Vector2){ 0, 0 };
-                    UpdateIntSettingToChord ();
+                    UpdateIntSettingTo3D (CHORD_SCREEN);
                     break;
 
                 default:
@@ -1231,13 +1265,16 @@ UpdateTransition (void)
             switch (current_screen)
                 {
                 case INTERVAL_SCREEN:
-                    UpdatePauseToInt ();
+                    UpdatePauseTo3D ();
                     break;
                 case FREE_SCREEN:
-                    UpdatePauseToFree ();
+                    UpdatePauseTo3D ();
                     break;
                 case HOME_SCREEN:
                     UpdatePauseToHome ();
+                    break;
+                case CHORD_SCREEN:
+                    UpdatePauseTo3D ();
                     break;
                 default:
                     break;
@@ -1247,7 +1284,7 @@ UpdateTransition (void)
             switch (current_screen)
                 {
                 case PAUSE_SCREEN:
-                    UpdateIntToPause ();
+                    Update3DToPause ();
                     break;
                 default:
                     break;
@@ -1257,7 +1294,17 @@ UpdateTransition (void)
             switch (current_screen)
                 {
                 case PAUSE_SCREEN:
-                    UpdateFreeToPause ();
+                    Update3DToPause ();
+                    break;
+                default:
+                    break;
+                }
+            break;
+        case CHORD_SCREEN:
+            switch (current_screen)
+                {
+                case PAUSE_SCREEN:
+                    Update3DToPause ();
                     break;
                 default:
                     break;
@@ -1303,15 +1350,17 @@ DrawTransition (void)
             switch (current_screen)
                 {
                 case INTERVAL_SCREEN:
-                    DrawPauseToInt ();
+                    DrawPauseTo3D (INTERVAL_SCREEN);
                     break;
                 case FREE_SCREEN:
-                    DrawPauseToFree ();
+                    DrawPauseTo3D (FREE_SCREEN);
                     break;
                 case HOME_SCREEN:
                     DrawPauseToHome ();
                     break;
-
+                case CHORD_SCREEN:
+                    DrawPauseTo3D (CHORD_SCREEN);
+                    break;
                 default:
                     break;
                 }
@@ -1320,7 +1369,7 @@ DrawTransition (void)
             switch (current_screen)
                 {
                 case PAUSE_SCREEN:
-                    DrawIntToPause ();
+                    Draw3DToPause (INTERVAL_SCREEN);
                     break;
                 default:
                     break;
@@ -1330,7 +1379,17 @@ DrawTransition (void)
             switch (current_screen)
                 {
                 case PAUSE_SCREEN:
-                    DrawFreeToPause ();
+                    Draw3DToPause (FREE_SCREEN);
+                    break;
+                default:
+                    break;
+                }
+            break;
+        case CHORD_SCREEN:
+            switch (current_screen)
+                {
+                case PAUSE_SCREEN:
+                    Draw3DToPause (CHORD_SCREEN);
                     break;
                 default:
                     break;
@@ -1348,4 +1407,33 @@ TransitionToScreen (enum Screen screen)
     former_screen = current_screen;
     looped_once = false;
     current_screen = screen;
+}
+
+void
+UnloadSoundInstrument (void)
+{
+
+    for (int i = 0; i < NO_OF_NOTES; i++)
+        {
+            UnloadSound (piano_sound[i]);
+        }
+
+    for (size_t i = 0; i < progressions.size; i++)
+        {
+            free (progressions.data[i].data);
+        }
+    free (progressions.data);
+    UnloadFont (font1);
+    UnloadFont (font2);
+    UnloadFont (font3);
+
+    for (int i = 0; i < NO_OF_ACTUAL_NOTE; i++)
+        {
+            UnloadMusicStream (drone[i]);
+        }
+
+    for (int i = 0; i < NO_OF_SHADERS; i++)
+        {
+            UnloadShader (shaders[i]);
+        }
 }

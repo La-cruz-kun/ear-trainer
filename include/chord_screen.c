@@ -1,5 +1,6 @@
 #include "chord_parser.h"
 #include "ear_trainer.h"
+#include "raylib.h"
 #include <raylib.h>
 
 static int finish = 0;
@@ -23,8 +24,10 @@ InitChordScreen (void)
 void
 UpdateChordScreen (void)
 {
+    finish = 0;
     if (!IsMusicStreamPlaying (drone[key]))
         {
+            SetMusicVolume (drone[key], 0.5);
             PlayMusicStream (drone[key]);
         }
     UpdateMusicStream (drone[key]);
@@ -41,6 +44,13 @@ UpdateChordScreen (void)
 
     if (state == 0)
         {
+            framesCounter++;
+            if (framesCounter == 80)
+                {
+                    StopChord (current_chord_notes);
+                    framesCounter = 0;
+                }
+
             ChordNotes chord_notes = convert_chordT_to_chordN (
                 progressions.data[random_prog].data[progression_counter], key);
             CheckKeyPress ();
@@ -71,16 +81,12 @@ UpdateChordScreen (void)
                         == progressions.data[random_prog].size - 1)
                         {
                             state = -1;
-                            progression_counter = 0;
                         }
-                    else
-                        {
-                            progression_counter++;
-                        }
+                    progression_counter++;
                 }
             if (IsKeyReleased (KEY_ENTER))
                 {
-                    PlayChordProg (key);
+                    PlayChordProg ();
                     state = 1;
                 }
         }
@@ -88,14 +94,29 @@ UpdateChordScreen (void)
     else if (state == 1)
         {
             CheckKeyPress ();
-            PlayChordProg (key);
+            PlayChordProg ();
         }
     else if (state == -1)
         {
             CheckKeyPress ();
-            PlayChordProg (key);
-            random_prog = GetRandomValue (0, progressions.size - 1);
-            state = 1;
+            if (framesCounter == 80)
+                {
+                    progression_counter = 0;
+                    random_prog = GetRandomValue (0, progressions.size - 1);
+                    PlayChordProg ();
+                    state = 1;
+                    framesCounter = 0;
+                }
+            framesCounter++;
+        }
+    AlignScreenButtons (MENU_BUTTON_HEIGHT, MENU_BUTTON_WIDTH,
+                        GetRenderWidth () * 3 / 4.0, 0,
+                        GetRenderHeight () / 20.0, no_of_buttons[CHORD_SCREEN],
+                        buttons[CHORD_SCREEN]);
+
+    if (IsMenuButtonPressed (&buttons[CHORD_SCREEN][0]))
+        {
+            finish = 1;
         }
 }
 
@@ -109,16 +130,25 @@ DrawChordScreen (void)
     DrawPiano ();
 
     DrawModel (models[LIGHT_CUBE], lightPosition, 0.5f, YELLOW);
-    for (int i = 0; current_chord_notes.chord[i] > -1; i++)
+    for (int i = 0; i < MAX_CHORD_SIZE; i++)
+        {
+            if (note_pool[i] != -1)
+                DrawBoundingBoxAsCube (keyBoxes[(int)note_pool[i]], BLUE);
+        }
+    if (current_chord_notes.chord[0] != -1)
+        DrawBoundingBoxAsCube (
+            keyBoxes[(int)current_chord_notes.chord[0] % OCTAVE], GREEN);
+    for (int i = 0; current_chord_notes.chord[i] != -1; i++)
         {
             DrawBoundingBoxAsCube (keyBoxes[(int)current_chord_notes.chord[i]],
-                                   BLUE);
+                                   GREEN);
         }
-    DrawGrid (10, 1);
     EndMode3D ();
+    for (int i = 0; i < no_of_buttons[CHORD_SCREEN]; i++)
+        DrawMenuButton (buttons[CHORD_SCREEN][i]);
     DrawText (TextFormat ("Current Key is %s", Key_to_text (key)), 30, 30, 24,
               RAYWHITE);
-    if (state == 0)
+    if (state == 0 || state == -1)
         {
             for (size_t i = 0; i < progression_counter; i++)
                 {
@@ -163,7 +193,7 @@ UpdateIntSettingToChord (void)
 }
 
 int
-GenChord (int key, int prog_number)
+GenChord (int local_key, int prog_number)
 {
     if (progression_counter >= progressions.data[prog_number].size)
         {
@@ -173,7 +203,7 @@ GenChord (int key, int prog_number)
         }
     former_chord_notes = current_chord_notes;
     current_chord_notes = convert_chordT_to_chordN (
-        progressions.data[prog_number].data[progression_counter], key);
+        progressions.data[prog_number].data[progression_counter], local_key);
     if (current_chord_notes.chord[0] == -1)
         {
             progression_counter = 0;
@@ -193,12 +223,13 @@ GenChord (int key, int prog_number)
 }
 
 void
-PlayChordProg (int key)
+PlayChordProg ()
 {
-    key = key + OCTAVE * 3;
+    int local_key = key + OCTAVE * 3;
     if (framesCounter == 80)
         {
-            if (!GenChord (key, random_prog))
+            StopChord (current_chord_notes);
+            if (!GenChord (local_key, random_prog))
                 {
                     TransitionChord ();
                     PlayChord (current_chord_notes);
@@ -265,14 +296,29 @@ TransitionChord (void)
 }
 
 void
-PlayChord (ChordNotes current_chord_notes)
+PlayChord (ChordNotes chord)
 {
+    if (chord.chord[0] != -1)
+        PlaySound (bass_sound[chord.chord[0] % OCTAVE]);
     for (int i = 0; i < MAX_CHORD_SIZE; i++)
         {
-            if (current_chord_notes.chord[i] > -1
-                && current_chord_notes.chord[i] < NO_OF_NOTES)
+            if (chord.chord[i] > -1 && chord.chord[i] < NO_OF_NOTES)
                 {
-                    PlaySound (sound[current_chord_notes.chord[i]]);
+                    PlaySound (piano_sound[chord.chord[i]]);
+                }
+        }
+}
+
+void
+StopChord (ChordNotes chord)
+{
+    if (chord.chord[0] != -1)
+        StopSound (bass_sound[current_chord_notes.chord[0] % OCTAVE]);
+    for (int i = 0; i < MAX_CHORD_SIZE; i++)
+        {
+            if (chord.chord[i] > -1 && chord.chord[i] < NO_OF_NOTES)
+                {
+                    StopSound (piano_sound[chord.chord[i]]);
                 }
         }
 }
@@ -294,7 +340,7 @@ CheckKeyPress (void)
                                     if (note_pool[i] == -1)
                                         {
                                             note_pool[i] = note;
-                                            PlaySound (sound[note]);
+                                            PlaySound (piano_sound[note]);
                                             break;
                                         }
                                 }
@@ -327,7 +373,7 @@ CheckKeyPress (void)
                         {
                             if (note_pool[i] == note)
                                 {
-                                    StopSound (sound[note]);
+                                    StopSound (piano_sound[note]);
                                     note_pool[i] = -1;
                                 }
                         }

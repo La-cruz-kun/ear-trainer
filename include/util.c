@@ -13,22 +13,6 @@ CreateMenuButton (Texture image, const char *text, Color text_color,
 }
 
 void
-calcMenuButtonPosition (MenuButton *button, ...)
-{
-    va_list args;
-    va_start (args, button);
-    MenuButton *next;
-    float padding = GetRenderHeight () / 20.0;
-    float position = button->bound.y + button->bound.height + padding;
-    while ((next = va_arg (args, MenuButton *)) != NULL)
-        {
-            next->bound.y = position;
-            position = next->bound.y + next->bound.height + padding;
-        }
-    va_end (args);
-}
-
-void
 AlignScreenButtons (float height, float width, float x, float y, float padding,
                     int no_of_buttons, MenuButton *buttons)
 {

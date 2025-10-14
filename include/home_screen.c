@@ -51,9 +51,6 @@ UpdateHomeScreen (void)
         {
             finish = 5;
         }
-    calcMenuButtonPosition (&buttons[HOME_SCREEN][0], &buttons[HOME_SCREEN][1],
-                            &buttons[HOME_SCREEN][2], &buttons[HOME_SCREEN][3],
-                            NULL);
 }
 void
 DrawHomeScreen (void)

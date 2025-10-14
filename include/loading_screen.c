@@ -59,7 +59,7 @@ UpdateLoadingScreen (void)
                 case STATE_FINISHED:
                     {
                         framesCounter++;
-                        logoPositionX = GetRenderWidth () / 2 - 128;
+                        logoPositionX = GetRenderWidth () / 2 - 256;
                         logoPositionY = GetRenderHeight () / 2 - 128;
 
                         topSideRecWidth = 16;
@@ -153,8 +153,9 @@ DrawLoadingScreen (void)
             switch (loadState)
                 {
                 case STATE_WAITING:
-                    DrawText ("PRESS ENTER to START LOADING DATA", 150, 170,
-                              20, DARKGRAY);
+                    DrawText ("PRESS ENTER to START LOADING DATA",
+                              GetRenderWidth () / 2.0,
+                              GetRenderHeight () / 2.0, 20, DARKGRAY);
                     break;
                 case STATE_LOADING:
                     {
@@ -162,20 +163,25 @@ DrawLoadingScreen (void)
                         if ((framesCounter / 15) % 2)
                             DrawTextEx (
                                 font2, "LOADING DATA...",
-                                (Vector2){
-                                    240 - TextLength ("LOADING DATA..."),
-                                    200 },
+                                (Vector2){ GetRenderWidth () / 2.0
+                                               - TextLength ("LOADING DATA...")
+                                                     * 64 / 4.0,
+                                           GetRenderHeight () / 2.0 },
                                 64, 1, DARKGRAY); // Draw text using font and
                                                   // additional parameters
                     }
                     break;
                 case STATE_FINISHED:
                     {
-                        DrawRectangle (150, 200, 500, 60, DARKGRAY);
+                        DrawRectangle (GetRenderWidth () / 2.0 - 500 / 2.0,
+                                       GetRenderHeight () / 2.0, 500, 60,
+                                       DARKGRAY);
                         DrawTextEx (
                             font2, "DATA LOADED!",
-                            (Vector2){ 250 - TextLength ("DATA LOADED!"),
-                                       200 },
+                            (Vector2){ GetRenderWidth () / 2.0
+                                           - TextLength ("DATA LOADED!") * 64
+                                                 / 4.0,
+                                       GetRenderHeight () / 2.0 },
                             64, 1, RAYWHITE); // Draw text using font and
                                               // additional parameters
                     }
@@ -254,7 +260,7 @@ DrawLoadingScreen (void)
                            Fade (RAYWHITE, alpha));
 
             DrawTextEx (font3, TextSubtext ("Cruz", 0, lettersCount),
-                        (Vector2){ GetRenderWidth () / 2.0 - 44,
+                        (Vector2){ GetRenderWidth () / 2.0 - 96,
                                    GetRenderHeight () / 2.0 + 48 },
                         64, 1, Fade (RAYWHITE, alpha));
 

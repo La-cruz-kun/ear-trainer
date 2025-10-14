@@ -1,4 +1,5 @@
 #include "ear_trainer.h"
+#include <raylib.h>
 
 static float offset = 0;
 static float velocity = 0;
@@ -113,14 +114,13 @@ DrawIntervalSettingScreen (void)
     DrawPiano ();
     EndMode3D ();
     DrawTextEx (font1, "Choose A Key",
-                (Vector2){ 0 + offset, GetRenderHeight () * 1 / 1.8 },
-                36 * GetRenderHeight () / 600.0, 1,
-                (Color){ 0, 255, 255, 255 });
+                (Vector2){ GetRenderWidth () / 50.0 + offset,
+                           GetRenderHeight () / 2.5 },
+                36 * GetRenderHeight () / 600.0, 1, LIGHTGRAY);
     DrawTextEx (font1, "Choose A Scale",
-                (Vector2){ GetRenderWidth () * 1 / 2.0 + offset,
-                           GetRenderHeight () * 1 / 1.8 },
-                36 * GetRenderHeight () / 600.0, 1,
-                (Color){ 0, 255, 255, 255 });
+                (Vector2){ GetRenderWidth () / 2.5 + offset,
+                           GetRenderHeight () / 2.5 },
+                36 * GetRenderHeight () / 600.0, 1, LIGHTGRAY);
     for (int i = 0; i < no_of_buttons[INTERVAL_SETTING_SCREEN]; i++)
         {
             DrawMenuButton (buttons[INTERVAL_SETTING_SCREEN][i]);
@@ -164,6 +164,7 @@ UpdateHomeToIntSetting (void)
             camera2d.offset.x = -offset;
         }
 }
+
 void
 DrawHomeToIntSetting (void)
 {
@@ -202,20 +203,20 @@ DrawHomeToIntSetting (void)
     DrawBackgroundImage (images[0]);
     for (int i = 0; i < no_of_buttons[HOME_SCREEN]; i++)
         DrawMenuButton (buttons[HOME_SCREEN][i]);
+    DrawTextEx (font1, "Choose A Key",
+                (Vector2){ GetRenderWidth () / 50.0 + GetRenderWidth (),
+                           GetRenderHeight () / 2.5 },
+                36 * GetRenderHeight () / 600.0, 1, LIGHTGRAY);
+    DrawTextEx (font1, "Choose A Scale",
+                (Vector2){ GetRenderWidth () / 2.5 + GetRenderWidth (),
+                           GetRenderHeight () / 2.5 },
+                36 * GetRenderHeight () / 600.0, 1, LIGHTGRAY);
+
     DrawTextEx (font1, TextFormat ("Currently Playing %s - %s", Title, Artist),
                 (Vector2){ GetRenderWidth () * 1 / 100.0,
                            GetRenderHeight () * 1 / 100.0 },
                 24 * GetRenderHeight () / 600.0, 1, DARKGREEN);
 
-    DrawTextEx (
-        font1, "Choose A Key",
-        (Vector2){ 0 + GetRenderWidth (), GetRenderHeight () * 1 / 1.8 },
-        36 * GetRenderHeight () / 600.0, 1, (Color){ 0, 255, 255, 255 });
-    DrawTextEx (font1, "Choose A Scale",
-                (Vector2){ GetRenderWidth () * 1 / 2.0 + GetRenderWidth (),
-                           GetRenderHeight () * 1 / 1.8 },
-                36 * GetRenderHeight () / 600.0, 1,
-                (Color){ 0, 255, 255, 255 });
     for (int i = 0; i < no_of_buttons[INTERVAL_SETTING_SCREEN]; i++)
         {
             DrawMenuButton (buttons[INTERVAL_SETTING_SCREEN][i]);

@@ -224,7 +224,6 @@ parse_chord_file (char *fileName)
     while (fgets (buffer, LINE_LENGTH, file))
         {
             int p_counter = 0; // parser counter
-            int c_counter = 0; // chord counter
             char temp[16]
                 = { 0 }; // Hoping no chord name is longer than 16 characters
             ChordTypes line_prog = { 0 };
@@ -247,7 +246,6 @@ parse_chord_file (char *fileName)
                             append_chord (&line_prog,
                                           convert_str_to_chordT (temp));
                             memset (temp, 0, 16);
-                            c_counter++;
                         }
                     else
                         {
