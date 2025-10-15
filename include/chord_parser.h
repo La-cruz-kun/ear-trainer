@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Abraham Kopiam Cruz (@La-cruz-kun)
+
+
 #ifndef CHORD_PARSER_H
 #define CHORD_PARSER_H
 #include "ear_trainer.h"

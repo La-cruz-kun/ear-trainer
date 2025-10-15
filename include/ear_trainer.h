@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Abraham Kopiam Cruz (@La-cruz-kun)
+
+
 #ifndef EAR_TRAINER_H
 #define EAR_TRAINER_H
 #include "parser.h"

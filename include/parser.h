@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Abraham Kopiam Cruz (@La-cruz-kun)
+
+
 #ifndef PARSER_H
 #define PARSER_H
 #include <iconv.h>
